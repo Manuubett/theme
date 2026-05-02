@@ -1,0 +1,1069 @@
+<!--
+  CBE Resource Hub — Bulk Upload Tool
+  Copyright © 2026 Bett Emanuel — https://bett.website
+  Drop multiple PDFs/DOCXs, auto-parse metadata from filenames,
+  review & edit each, then batch upload to R2 + Firestore
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bulk Upload | CBE Resource Hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f3ee;
+  --bg2:#ede9e1;
+  --bg3:#e2ddd4;
+  --surf:#fff;
+  --surf2:#faf9f6;
+  --border:#d4cfc4;
+  --border2:#c4bdb0;
+  --text:#1a1710;
+  --text2:#5c5647;
+  --text3:#9c9080;
+  --ink:#1a1710;
+  --accent:#d4622a;
+  --accent2:#b8501f;
+  --alight:#fdf0eb;
+  --gold:#c9960a;
+  --goldlight:#fef9e7;
+  --green:#2d7d46;
+  --greenlight:#edf7f1;
+  --red:#c0392b;
+  --redlight:#fdf0ef;
+  --blue:#2563eb;
+  --bluelight:#eff6ff;
+  --r:10px;--r2:6px;
+}
+
+body{
+  font-family:'Barlow',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  font-size:14px;
+  min-height:100vh;
+}
+
+/* ── grain texture overlay ── */
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  opacity:.4;
+}
+
+/* ── HEADER ── */
+header{
+  position:relative;z-index:10;
+  background:var(--ink);
+  padding:0 32px;
+  height:56px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.hdr-logo{display:flex;align-items:center;gap:14px}
+.hdr-wordmark{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:22px;letter-spacing:1px;color:#fff;line-height:1;
+}
+.hdr-sub{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:11px;font-weight:600;letter-spacing:2px;
+  color:#9c9080;text-transform:uppercase;
+}
+.hdr-pill{
+  background:var(--accent);color:#fff;
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;
+  padding:4px 12px;border-radius:3px;
+}
+.hdr-r{display:flex;align-items:center;gap:10px}
+.btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:7px 16px;border-radius:var(--r2);
+  font-family:'Barlow',sans-serif;font-size:13px;font-weight:600;
+  cursor:pointer;border:none;transition:all .14s;white-space:nowrap;
+}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent2)}
+.btn-ink{background:var(--ink);color:#fff}
+.btn-ink:hover{background:#2d2a22}
+.btn-outline{background:none;border:1.5px solid var(--border2);color:var(--text2)}
+.btn-outline:hover{background:var(--bg3);border-color:var(--border2);color:var(--text)}
+.btn-green{background:var(--green);color:#fff}
+.btn-green:hover{background:#236038}
+.btn-danger{background:var(--redlight);color:var(--red);border:1px solid rgba(192,57,43,.2)}
+.btn-danger:hover{background:var(--red);color:#fff}
+.btn-sm{padding:5px 11px;font-size:12px}
+.btn-xs{padding:3px 8px;font-size:11px}
+.btn-lg{padding:11px 28px;font-size:15px;font-weight:700}
+
+/* ── PAGE ── */
+.page{
+  position:relative;z-index:1;
+  max-width:1080px;margin:0 auto;padding:32px 24px;
+}
+
+/* ── STEP HEADER ── */
+.steps-bar{
+  display:flex;align-items:center;gap:0;margin-bottom:32px;
+  background:var(--surf);border:1.5px solid var(--border);border-radius:var(--r);
+  overflow:hidden;
+}
+.step-item{
+  flex:1;display:flex;align-items:center;gap:10px;
+  padding:12px 18px;border-right:1.5px solid var(--border);
+  font-size:12.5px;font-weight:600;color:var(--text3);transition:all .2s;
+}
+.step-item:last-child{border-right:none}
+.step-item.done{color:var(--green);background:var(--greenlight)}
+.step-item.active{color:var(--accent);background:var(--alight)}
+.step-n{
+  width:24px;height:24px;border-radius:50%;
+  display:grid;place-items:center;font-size:11px;font-weight:800;flex-shrink:0;
+  background:var(--bg3);color:var(--text3);
+  font-family:'Barlow Condensed',monospace;
+}
+.step-item.done .step-n{background:var(--green);color:#fff}
+.step-item.active .step-n{background:var(--accent);color:#fff}
+
+/* ── DROP ZONE ── */
+.drop-section{
+  border:2.5px dashed var(--border2);border-radius:var(--r);
+  padding:64px 32px;text-align:center;
+  background:var(--surf);cursor:pointer;
+  transition:all .2s;position:relative;overflow:hidden;
+}
+.drop-section::after{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse at 50% 120%,rgba(212,98,42,.06) 0%,transparent 60%);
+  pointer-events:none;
+}
+.drop-section:hover,.drop-section.dragging{
+  border-color:var(--accent);background:var(--alight);
+}
+.drop-section input[type=file]{
+  position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;
+}
+.drop-icon{
+  font-size:52px;margin-bottom:20px;display:block;
+  animation:bob 3s ease-in-out infinite;
+}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+.drop-title{
+  font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:1px;
+  color:var(--text);margin-bottom:8px;
+}
+.drop-sub{font-size:14px;color:var(--text2);line-height:1.7;max-width:480px;margin:0 auto 20px}
+.drop-types{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.drop-type{
+  padding:3px 12px;border-radius:3px;
+  font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;
+}
+.dt-pdf{background:var(--redlight);color:var(--red);border:1px solid rgba(192,57,43,.2)}
+.dt-docx{background:var(--bluelight);color:var(--blue);border:1px solid rgba(37,99,235,.2)}
+.drop-limit{font-size:11px;color:var(--text3);margin-top:12px}
+
+/* ── FILE QUEUE ── */
+.queue-header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:16px;flex-wrap:wrap;gap:10px;
+}
+.queue-title{
+  font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.5px;
+}
+.queue-meta{font-size:12px;color:var(--text3);margin-top:2px}
+.queue-actions{display:flex;gap:8px;align-items:center}
+
+.file-list{display:flex;flex-direction:column;gap:12px;margin-bottom:24px}
+
+/* ── FILE CARD ── */
+.file-card{
+  background:var(--surf);border:1.5px solid var(--border);border-radius:var(--r);
+  overflow:hidden;transition:border-color .15s;
+}
+.file-card.editing{border-color:var(--accent)}
+.file-card.done{border-color:var(--green);background:var(--greenlight)}
+.file-card.error{border-color:var(--red);background:var(--redlight)}
+.file-card.uploading{border-color:var(--gold)}
+
+.fc-top{
+  display:flex;align-items:center;gap:14px;padding:14px 16px;
+  cursor:pointer;user-select:none;
+}
+.fc-icon{
+  width:42px;height:42px;border-radius:8px;display:grid;place-items:center;
+  font-size:18px;flex-shrink:0;
+}
+.fc-icon.pdf{background:var(--redlight)}
+.fc-icon.docx{background:var(--bluelight)}
+
+.fc-info{flex:1;min-width:0}
+.fc-filename{
+  font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  font-family:'Barlow Condensed',sans-serif;letter-spacing:.2px;
+}
+.fc-parsed{font-size:11.5px;color:var(--text2);margin-top:3px;display:flex;flex-wrap:wrap;gap:6px}
+.fp-tag{
+  padding:1px 7px;border-radius:3px;font-size:10.5px;font-weight:700;
+  font-family:'Barlow Condensed',sans-serif;letter-spacing:.5px;text-transform:uppercase;
+}
+.fp-tag.grade{background:var(--bg3);color:var(--text2)}
+.fp-tag.type{background:var(--alight);color:var(--accent)}
+.fp-tag.subj{background:var(--bluelight);color:var(--blue)}
+.fp-tag.free{background:var(--greenlight);color:var(--green)}
+.fp-tag.premium{background:var(--goldlight);color:var(--gold)}
+
+.fc-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.fc-size{font-size:11px;color:var(--text3);font-family:'Barlow Condensed',monospace}
+.fc-status{
+  width:22px;height:22px;border-radius:50%;display:grid;place-items:center;
+  font-size:11px;flex-shrink:0;
+}
+.fc-status.pending{background:var(--bg3);color:var(--text3)}
+.fc-status.done{background:var(--green);color:#fff}
+.fc-status.error{background:var(--red);color:#fff}
+.fc-status.uploading{background:var(--gold);color:#fff}
+.fc-chevron{font-size:12px;color:var(--text3);transition:transform .2s}
+.fc-chevron.open{transform:rotate(180deg)}
+
+/* ── EXPANDABLE FORM ── */
+.fc-body{
+  display:none;border-top:1.5px solid var(--border);
+  padding:16px;
+  background:var(--surf2);
+}
+.fc-body.open{display:block}
+
+.meta-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px}
+.meta-grid.wide{grid-template-columns:1fr 1fr}
+.meta-row{display:flex;flex-direction:column;gap:4px}
+.meta-label{
+  font-size:10px;font-weight:700;color:var(--text3);
+  text-transform:uppercase;letter-spacing:.8px;
+}
+.meta-input,.meta-select,.meta-textarea{
+  padding:7px 10px;background:var(--bg);border:1.5px solid var(--border);
+  border-radius:var(--r2);color:var(--text);font-family:'Barlow',sans-serif;
+  font-size:13px;outline:none;transition:border-color .15s;width:100%;
+}
+.meta-input:focus,.meta-select:focus,.meta-textarea:focus{border-color:var(--accent)}
+.meta-input::placeholder{color:var(--text3)}
+.meta-select option{background:var(--surf)}
+.meta-textarea{resize:vertical;min-height:60px;line-height:1.5}
+
+.meta-toggle-row{
+  display:flex;align-items:center;justify-content:space-between;
+  background:var(--bg);border:1.5px solid var(--border);border-radius:var(--r2);
+  padding:8px 10px;
+}
+.meta-toggle-label{font-size:12.5px;font-weight:600}
+.meta-toggle-sub{font-size:10.5px;color:var(--text3)}
+.toggle-sw{
+  width:36px;height:20px;background:var(--border2);border-radius:10px;
+  position:relative;cursor:pointer;transition:background .2s;flex-shrink:0;border:none;
+}
+.toggle-sw.on{background:var(--green)}
+.toggle-sw::after{
+  content:'';position:absolute;top:3px;left:3px;
+  width:14px;height:14px;border-radius:50%;background:#fff;transition:transform .2s;
+}
+.toggle-sw.on::after{transform:translateX(16px)}
+
+.fc-actions{display:flex;gap:8px;justify-content:flex-end;padding-top:4px}
+
+/* ── PROGRESS BAR (per file) ── */
+.fc-progress{
+  height:3px;background:var(--bg3);overflow:hidden;
+}
+.fc-progress-bar{
+  height:100%;background:var(--accent);width:0%;transition:width .3s;
+}
+.fc-progress.done .fc-progress-bar{background:var(--green);width:100%}
+.fc-progress.error .fc-progress-bar{background:var(--red);width:100%}
+.fc-progress.uploading .fc-progress-bar{
+  background:var(--gold);
+  animation:indeterminate 1.4s ease infinite;
+}
+@keyframes indeterminate{
+  0%{transform:translateX(-100%);width:60%}
+  100%{transform:translateX(200%);width:60%}
+}
+
+/* ── BOTTOM BAR ── */
+.bottom-bar{
+  position:sticky;bottom:0;z-index:50;
+  background:var(--ink);
+  padding:14px 24px;
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:12px;
+  border-top:2px solid var(--accent);
+}
+.bb-stats{display:flex;gap:24px}
+.bb-stat{text-align:center}
+.bb-n{
+  font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:.5px;
+  line-height:1;color:#fff;
+}
+.bb-n.accent{color:var(--accent)}
+.bb-n.green{color:#4ade80}
+.bb-n.gold{color:#fbbf24}
+.bb-n.red{color:#f87171}
+.bb-l{font-size:10px;color:#9c9080;text-transform:uppercase;letter-spacing:.8px;margin-top:2px}
+
+/* ── SUMMARY SCREEN ── */
+.summary{display:none;text-align:center;padding:48px 20px}
+.summary.active{display:block}
+.summary-icon{font-size:64px;margin-bottom:16px;display:block}
+.summary-title{
+  font-family:'Bebas Neue',sans-serif;font-size:42px;letter-spacing:1px;
+  color:var(--text);margin-bottom:8px;
+}
+.summary-sub{font-size:15px;color:var(--text2);line-height:1.7;margin-bottom:24px}
+.summary-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:12px;
+  max-width:480px;margin:0 auto 28px;
+}
+.sg-card{
+  background:var(--surf);border:1.5px solid var(--border);border-radius:var(--r);
+  padding:16px;
+}
+.sg-n{
+  font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:.5px;line-height:1;
+}
+.sg-n.green{color:var(--green)}
+.sg-n.red{color:var(--red)}
+.sg-n.gold{color:var(--gold)}
+.sg-l{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-top:4px}
+
+/* ── TOAST ── */
+#tc{position:fixed;top:66px;right:16px;z-index:9999;display:flex;flex-direction:column;gap:6px;pointer-events:none}
+.t{
+  display:flex;align-items:center;gap:8px;padding:10px 16px;border-radius:var(--r2);
+  font-size:12.5px;font-weight:500;box-shadow:0 8px 32px rgba(0,0,0,.15);
+  animation:tin .25s ease;min-width:220px;pointer-events:auto;
+  border-left:3px solid;
+}
+.t.ok {background:#064e3b;color:#ecfdf5;border-color:#10b981}
+.t.err{background:#7f1d1d;color:#fef2f2;border-color:#ef4444}
+.t.info{background:#1e3a5f;color:#dbeafe;border-color:#3b82f6}
+@keyframes tin{from{transform:translateX(110%);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes tout{to{transform:translateX(110%);opacity:0}}
+
+/* ── SPIN ── */
+.spin{
+  width:14px;height:14px;border:2px solid rgba(255,255,255,.3);
+  border-top-color:#fff;border-radius:50%;animation:sp .65s linear infinite;
+}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* ── RESPONSIVE ── */
+@media(max-width:700px){
+  .meta-grid{grid-template-columns:1fr 1fr}
+  .meta-grid.wide{grid-template-columns:1fr}
+  .page{padding:20px 14px}
+  .drop-section{padding:40px 16px}
+  .drop-title{font-size:24px}
+  .summary-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<div id="tc"></div>
+
+<header>
+  <div class="hdr-logo">
+    <div>
+      <div class="hdr-wordmark">CBE Resource Hub</div>
+      <div class="hdr-sub">Bulk Upload Tool</div>
+    </div>
+    <span class="hdr-pill">OWNER</span>
+  </div>
+  <div class="hdr-r">
+    <span id="authUserName" style="font-size:11px;color:#9c9080;font-family:'Barlow Condensed',sans-serif;letter-spacing:.5px"></span>
+    <button class="btn btn-outline btn-sm" style="color:#9c9080;border-color:#3a3628" onclick="window.location.href='resource-admin.html'">← Admin</button>
+  </div>
+</header>
+
+<div class="page">
+
+  <!-- STEPS BAR -->
+  <div class="steps-bar" id="stepsBar">
+    <div class="step-item active" id="step1">
+      <div class="step-n">1</div>
+      <div><div>Drop Files</div></div>
+    </div>
+    <div class="step-item" id="step2">
+      <div class="step-n">2</div>
+      <div><div>Review &amp; Edit</div></div>
+    </div>
+    <div class="step-item" id="step3">
+      <div class="step-n">3</div>
+      <div><div>Batch Upload</div></div>
+    </div>
+    <div class="step-item" id="step4">
+      <div class="step-n">4</div>
+      <div><div>Done</div></div>
+    </div>
+  </div>
+
+  <!-- STEP 1: DROP ZONE -->
+  <div id="dropSection">
+    <div class="drop-section" id="dropZone"
+      ondragover="onDrag(event,true)"
+      ondragleave="onDrag(event,false)"
+      ondrop="onDrop(event)">
+      <input type="file" id="fileInput" multiple
+        accept=".pdf,.docx,.doc"
+        onchange="onFileSelect(event)">
+      <span class="drop-icon">📂</span>
+      <div class="drop-title">Drop Your Files Here</div>
+      <div class="drop-sub">
+        Select multiple PDF or DOCX files at once.<br>
+        The tool will automatically read filenames and suggest grade, subject, type and title for each.
+      </div>
+      <div class="drop-types">
+        <span class="drop-type dt-pdf">PDF</span>
+        <span class="drop-type dt-docx">DOCX / DOC</span>
+      </div>
+      <div class="drop-limit">Max 20MB per file · Up to 50 files at once</div>
+    </div>
+  </div>
+
+  <!-- STEP 2: QUEUE -->
+  <div id="queueSection" style="display:none">
+    <div class="queue-header">
+      <div>
+        <div class="queue-title">Review Files</div>
+        <div class="queue-meta" id="queueMeta">0 files queued</div>
+      </div>
+      <div class="queue-actions">
+        <button class="btn btn-outline btn-sm" onclick="addMore()">+ Add More</button>
+        <button class="btn btn-outline btn-sm" onclick="applyAllFree()" title="Mark all as free">All Free</button>
+        <button class="btn btn-outline btn-sm" onclick="applyAllPremium()" title="Mark all as premium">All Premium</button>
+        <button class="btn btn-primary" onclick="startBatchUpload()" id="uploadAllBtn">
+          ⬆️ Upload All
+        </button>
+      </div>
+    </div>
+
+    <div class="file-list" id="fileList"></div>
+
+    <!-- hidden extra file input -->
+    <input type="file" id="extraInput" multiple accept=".pdf,.docx,.doc"
+      style="display:none" onchange="onExtraSelect(event)">
+  </div>
+
+  <!-- STEP 3: SUMMARY -->
+  <div class="summary" id="summarySection">
+    <span class="summary-icon">🎉</span>
+    <div class="summary-title">Upload Complete</div>
+    <div class="summary-sub" id="summaryMsg">All files uploaded successfully.</div>
+    <div class="summary-grid">
+      <div class="sg-card">
+        <div class="sg-n green" id="sumDone">0</div>
+        <div class="sg-l">Uploaded</div>
+      </div>
+      <div class="sg-card">
+        <div class="sg-n red" id="sumFailed">0</div>
+        <div class="sg-l">Failed</div>
+      </div>
+      <div class="sg-card">
+        <div class="sg-n gold" id="sumSkipped">0</div>
+        <div class="sg-l">Skipped</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+      <button class="btn btn-ink btn-lg" onclick="resetAll()">Upload More</button>
+      <button class="btn btn-primary btn-lg" onclick="window.location.href='resource-admin.html'">Go to Admin →</button>
+    </div>
+  </div>
+
+</div><!-- /page -->
+
+<!-- BOTTOM BAR -->
+<div class="bottom-bar" id="bottomBar" style="display:none">
+  <div class="bb-stats">
+    <div class="bb-stat">
+      <div class="bb-n" id="bbTotal">0</div>
+      <div class="bb-l">Total</div>
+    </div>
+    <div class="bb-stat">
+      <div class="bb-n green" id="bbDone">0</div>
+      <div class="bb-l">Done</div>
+    </div>
+    <div class="bb-stat">
+      <div class="bb-n red" id="bbFailed">0</div>
+      <div class="bb-l">Failed</div>
+    </div>
+    <div class="bb-stat">
+      <div class="bb-n gold" id="bbPending">0</div>
+      <div class="bb-l">Pending</div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <div style="font-size:12px;color:#9c9080" id="bbMsg">Ready to upload</div>
+    <button class="btn btn-primary" onclick="startBatchUpload()" id="bbUploadBtn">
+      ⬆️ Upload All
+    </button>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+<script>
+firebase.initializeApp({
+  apiKey:            "AIzaSyDPZLbDio7OibE-FEXqFF1OdhM0qZc3yII",
+  authDomain:        "divine-treat-450709-b5.firebaseapp.com",
+  projectId:         "divine-treat-450709-b5",
+  storageBucket:     "divine-treat-450709-b5.firebasestorage.app",
+  messagingSenderId: "866518506476",
+  appId:             "1:866518506476:web:e2d3618b61f88e1f6a3ec9",
+});
+const auth = firebase.auth();
+auth.setPersistence(firebase.auth.Auth.Persistence.SESSION).catch(()=>{});
+
+// ── Auth gate — redirect to admin login if not signed in ──
+auth.onAuthStateChanged(user => {
+  if (!user) {
+    // Not signed in — go back to admin to login first
+    toast('Please sign in from the Admin page first', 'err');
+    setTimeout(() => { window.location.href = 'resource-admin.html'; }, 2000);
+    return;
+  }
+  // Show user info in header
+  const nameEl = document.getElementById('authUserName');
+  if (nameEl) nameEl.textContent = user.email || 'Owner';
+});
+</script>
+
+const BACKEND = 'https://cbe-y1zb.onrender.com';
+
+// ════════════════════════════════════════════
+// FILE QUEUE STATE
+// ════════════════════════════════════════════
+let queue = []; // array of { file, id, meta, status, error }
+let uploadRunning = false;
+
+// ════════════════════════════════════════════
+// KEYWORD MAPS — CBC Kenya context
+// ════════════════════════════════════════════
+const SUBJECT_KEYWORDS = {
+  'Mathematics':           ['math','maths','mathematics','algebra','geometry','calculus','arithmetic'],
+  'English':               ['english','language','composition','comprehension','grammar','literature'],
+  'Kiswahili':             ['kiswahili','swahili','lugha','insha','fasihi'],
+  'Integrated Science':    ['science','integ','biology','chemistry','physics','sci'],
+  'Science & Technology':  ['science tech','sci tech','s&t'],
+  'Social Studies':        ['social','geography','history','civics','soc'],
+  'Religious Education':   ['cre','ire','re','religious','religion'],
+  'Creative Arts & Sports':['art','arts','creative','sports','music','craft','pe'],
+  'Pre-Technical Studies': ['pre-tech','pretech','technical','woodwork','metal','drawing','pret'],
+  'Agriculture & Nutrition':['agri','agriculture','nutrition','farming','food','home science'],
+  'Mathematics Activities':['math activ','mathematical activ'],
+  'Integrated Activities': ['integ activ','integrated activ'],
+};
+
+const TYPE_KEYWORDS = {
+  'exam':   ['exam','test','cat','rat','assessment','kjsea','kcpe','paper','quiz','mock','end of term','eot','mid term','midterm'],
+  'lesson': ['lesson','plan','lp','notes for teacher','teaching','scheme of lesson'],
+  'scheme': ['scheme','sow','work','program','prog','curriculum'],
+  'rubric': ['rubric','assessment tool','checklist','observation','portfolio','rating'],
+  'notes':  ['notes','revision','summary','guide','handout','worksheet','activity'],
+};
+
+const GRADE_PATTERNS = [
+  { re:/gr(?:ade)?\s*([1-9])\s*[-–]\s*([1-9])/i,  fn:m=>`${m[1]}-${m[2]}` },
+  { re:/gr(?:ade)?\s*([1-9])/i,                     fn:m=>gradeToRange(m[1]) },
+  { re:/grade\s*([1-9])/i,                          fn:m=>gradeToRange(m[1]) },
+  { re:/g([1-9])/i,                                 fn:m=>gradeToRange(m[1]) },
+  { re:/([1-9])\s*[-–]\s*([1-9])/,                 fn:m=>`${m[1]}-${m[2]}` },
+  { re:/class\s*([1-9])/i,                          fn:m=>gradeToRange(m[1]) },
+  { re:/std\s*([1-9])/i,                            fn:m=>gradeToRange(m[1]) },
+  { re:/standard\s*([1-9])/i,                       fn:m=>gradeToRange(m[1]) },
+];
+
+function gradeToRange(g){
+  const n = parseInt(g);
+  if(n>=1&&n<=3) return '1-3';
+  if(n>=4&&n<=6) return '4-6';
+  return '7-9';
+}
+
+const TYPE_ICONS = {
+  exam:'✏️', lesson:'📖', scheme:'📅', rubric:'📊', notes:'📚',
+};
+const SUBJECT_ICONS = {
+  'Mathematics':'📐','English':'📖','Kiswahili':'🗣️',
+  'Integrated Science':'🔬','Science & Technology':'🔬',
+  'Social Studies':'🌍','Religious Education':'✝️',
+  'Creative Arts & Sports':'🎨','Pre-Technical Studies':'🔧',
+  'Agriculture & Nutrition':'🌱','Mathematics Activities':'🔢',
+  'Integrated Activities':'🌈',
+};
+
+// ════════════════════════════════════════════
+// PARSE FILENAME → suggested metadata
+// ════════════════════════════════════════════
+function parseFilename(filename){
+  const raw  = filename.replace(/\.[^.]+$/, ''); // strip extension
+  const norm = raw.toLowerCase().replace(/[_\-\.]+/g,' ').trim();
+
+  // Detect grade
+  let grades = '7-9';
+  for(const pat of GRADE_PATTERNS){
+    const m = norm.match(pat.re);
+    if(m){ grades = pat.fn(m); break; }
+  }
+
+  // Detect type
+  let type = 'exam';
+  for(const [t, kws] of Object.entries(TYPE_KEYWORDS)){
+    if(kws.some(k=>norm.includes(k))){ type=t; break; }
+  }
+
+  // Detect subject
+  let subject = '';
+  for(const [subj, kws] of Object.entries(SUBJECT_KEYWORDS)){
+    if(kws.some(k=>norm.includes(k))){ subject=subj; break; }
+  }
+
+  // Build a clean title from filename
+  const title = raw
+    .replace(/_/g,' ')
+    .replace(/-/g,' ')
+    .replace(/\s+/g,' ')
+    .replace(/\b(gr|grade)\s*(\d)/gi, 'Grade $2')
+    .replace(/\b(t|term)\s*(\d)/gi, 'Term $2')
+    .replace(/\brat\b/gi,'RAT')
+    .replace(/\bcat\b/gi,'CAT')
+    .replace(/\bkjsea\b/gi,'KJSEA')
+    .replace(/\bkcpe\b/gi,'KCPE')
+    .replace(/\bcbc\b/gi,'CBC')
+    .replace(/\bcre\b/gi,'CRE')
+    .replace(/\bire\b/gi,'IRE')
+    .trim()
+    .replace(/\b\w/g,c=>c.toUpperCase()); // Title Case
+
+  // Generate description
+  const gradeLabel = grades==='1-3'?'Grade 1–3':grades==='4-6'?'Grade 4–6':'Grade 7–9';
+  const desc = [
+    subject ? `${subject} ${typeLabel(type)}` : `${typeLabel(type)}`,
+    `for ${gradeLabel}`,
+    subject?`covering CBC ${subject} curriculum.`:'',
+  ].filter(Boolean).join(' ');
+
+  const icon = SUBJECT_ICONS[subject] || TYPE_ICONS[type] || '📄';
+
+  return { title, desc, grades, type, subject, icon, free:false };
+}
+
+function typeLabel(t){
+  return {exam:'assessment paper',lesson:'lesson plan',scheme:'scheme of work',rubric:'assessment rubric',notes:'revision notes'}[t]||t;
+}
+
+// ════════════════════════════════════════════
+// FILE HANDLING
+// ════════════════════════════════════════════
+function onDrag(e,active){
+  e.preventDefault();
+  document.getElementById('dropZone').classList.toggle('dragging',active);
+}
+function onDrop(e){
+  e.preventDefault();
+  document.getElementById('dropZone').classList.remove('dragging');
+  addFiles([...e.dataTransfer.files]);
+}
+function onFileSelect(e){ addFiles([...e.target.files]); }
+function onExtraSelect(e){ addFiles([...e.target.files]); }
+function addMore(){ document.getElementById('extraInput').click(); }
+
+function addFiles(files){
+  const allowed=['application/pdf',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/msword'];
+  let added=0, skipped=0;
+
+  for(const f of files){
+    if(queue.length>=50){ toast('Maximum 50 files at once','err'); break; }
+    if(!allowed.includes(f.type)){ skipped++; continue; }
+    if(f.size>20*1024*1024){ toast(`${f.name} exceeds 20MB — skipped`,'err'); skipped++; continue; }
+    // Check duplicate
+    if(queue.find(q=>q.file.name===f.name&&q.file.size===f.size)){ skipped++; continue; }
+
+    const id   = 'f'+Date.now()+Math.random().toString(36).slice(2,6);
+    const meta = parseFilename(f.name);
+    queue.push({ id, file:f, meta, status:'pending', error:null, expanded:false });
+    added++;
+  }
+
+  if(added>0){
+    if(skipped>0) toast(`${added} files added · ${skipped} skipped`,'info');
+    else          toast(`${added} file${added>1?'s':''} added`,'ok');
+    showQueue();
+  } else if(skipped>0){
+    toast(`${skipped} file${skipped>1?'s':''} skipped (wrong type or duplicate)`,'err');
+  }
+}
+
+function showQueue(){
+  document.getElementById('dropSection').style.display   = 'none';
+  document.getElementById('queueSection').style.display  = '';
+  document.getElementById('summarySection').classList.remove('active');
+  document.getElementById('bottomBar').style.display     = 'flex';
+  setStep(2);
+  renderQueue();
+  updateStats();
+}
+
+// ════════════════════════════════════════════
+// RENDER QUEUE
+// ════════════════════════════════════════════
+function renderQueue(){
+  document.getElementById('queueMeta').textContent =
+    `${queue.length} file${queue.length!==1?'s':''} queued · click any row to edit metadata`;
+
+  document.getElementById('fileList').innerHTML = queue.map(item=>{
+    const ext  = item.file.name.split('.').pop().toUpperCase();
+    const size = item.file.size>=1024*1024
+      ? (item.file.size/1024/1024).toFixed(1)+'MB'
+      : Math.round(item.file.size/1024)+'KB';
+    const m    = item.meta;
+
+    const statusIcon = {
+      pending:'○', done:'✓', error:'✕', uploading:'…',
+    }[item.status]||'○';
+
+    return `
+    <div class="file-card ${item.status}" id="card-${item.id}">
+      <div class="fc-progress ${item.status}">
+        <div class="fc-progress-bar" id="pb-${item.id}"
+          style="width:${item.status==='done'?100:0}%"></div>
+      </div>
+      <div class="fc-top" onclick="toggleExpand('${item.id}')">
+        <div class="fc-icon ${ext.toLowerCase()}">${ext==='PDF'?'📕':'📘'}</div>
+        <div class="fc-info">
+          <div class="fc-filename">${item.file.name}</div>
+          <div class="fc-parsed">
+            ${m.grades?`<span class="fp-tag grade">Gr ${m.grades}</span>`:''}
+            ${m.type?`<span class="fp-tag type">${m.type}</span>`:''}
+            ${m.subject?`<span class="fp-tag subj">${m.subject}</span>`:''}
+            <span class="fp-tag ${m.free?'free':'premium'}">${m.free?'Free':'Premium'}</span>
+            ${item.status==='error'?`<span class="fp-tag" style="background:var(--redlight);color:var(--red)">Error: ${item.error||'failed'}</span>`:''}
+          </div>
+        </div>
+        <div class="fc-right">
+          <span class="fc-size">${size} · ${ext}</span>
+          <span class="fc-status ${item.status}">${statusIcon}</span>
+          ${item.status==='pending'||item.status==='error'?
+            `<span class="fc-chevron ${item.expanded?'open':''}" id="chev-${item.id}">▾</span>`
+            :`<span></span>`}
+        </div>
+      </div>
+      ${(item.status==='pending'||item.status==='error')?`
+      <div class="fc-body ${item.expanded?'open':''}" id="body-${item.id}">
+        <div class="meta-grid">
+          <div class="meta-row" style="grid-column:1/-1">
+            <label class="meta-label">Title *</label>
+            <input class="meta-input" id="t-${item.id}" value="${escHtml(m.title)}" placeholder="Resource title">
+          </div>
+          <div class="meta-row">
+            <label class="meta-label">Type *</label>
+            <select class="meta-select" id="tp-${item.id}">
+              <option value="lesson" ${m.type==='lesson'?'selected':''}>📖 Lesson Plan</option>
+              <option value="exam"   ${m.type==='exam'?'selected':''}>✏️ Exam Paper</option>
+              <option value="scheme" ${m.type==='scheme'?'selected':''}>📅 Scheme of Work</option>
+              <option value="rubric" ${m.type==='rubric'?'selected':''}>📊 Rubric</option>
+              <option value="notes"  ${m.type==='notes'?'selected':''}>📚 Revision Notes</option>
+            </select>
+          </div>
+          <div class="meta-row">
+            <label class="meta-label">Grades *</label>
+            <select class="meta-select" id="gr-${item.id}">
+              <option value="1-3" ${m.grades==='1-3'?'selected':''}>Grade 1–3</option>
+              <option value="4-6" ${m.grades==='4-6'?'selected':''}>Grade 4–6</option>
+              <option value="7-9" ${m.grades==='7-9'?'selected':''}>Grade 7–9</option>
+              <option value="1-9" ${m.grades==='1-9'?'selected':''}>All Grades</option>
+            </select>
+          </div>
+          <div class="meta-row">
+            <label class="meta-label">Subject</label>
+            <select class="meta-select" id="sb-${item.id}">
+              <option value="">-- Subject --</option>
+              ${['Mathematics','English','Kiswahili','Integrated Science','Science & Technology',
+                 'Social Studies','Religious Education','Creative Arts & Sports',
+                 'Pre-Technical Studies','Agriculture & Nutrition','All Subjects']
+                .map(s=>`<option value="${s}" ${m.subject===s?'selected':''}>${s}</option>`).join('')}
+            </select>
+          </div>
+          <div class="meta-row">
+            <label class="meta-label">Pages</label>
+            <input class="meta-input" type="number" id="pg-${item.id}"
+              ${m.pages ? `value="${m.pages}"` : ''}
+              placeholder="e.g. 4" min="1" max="500">
+          </div>
+          <div class="meta-row">
+            <label class="meta-label">Icon</label>
+            <input class="meta-input" id="ic-${item.id}"
+              data-icon="${escHtml(m.icon||'📄')}"
+              maxlength="4" style="font-size:20px;text-align:center;width:70px">
+          </div>
+        </div>
+        <div class="meta-row" style="margin-bottom:12px">
+          <label class="meta-label">Description</label>
+          <textarea class="meta-textarea" id="dc-${item.id}" placeholder="Brief description">${escHtml(m.desc)}</textarea>
+        </div>
+        <div class="meta-toggle-row" style="margin-bottom:12px">
+          <div>
+            <div class="meta-toggle-label">Free Resource</div>
+            <div class="meta-toggle-sub">Available without subscription</div>
+          </div>
+          <button class="toggle-sw ${m.free?'on':''}" id="fr-${item.id}"
+            onclick="toggleItemFree('${item.id}',event)"></button>
+        </div>
+        <div class="fc-actions">
+          <button class="btn btn-danger btn-xs" onclick="removeFile('${item.id}',event)">🗑️ Remove</button>
+          <button class="btn btn-outline btn-xs" onclick="collapseCard('${item.id}',event)">Collapse</button>
+          <button class="btn btn-primary btn-xs" onclick="saveCardMeta('${item.id}',event)">✓ Apply</button>
+        </div>
+      </div>`:''}
+    </div>`;
+  }).join('');
+
+  updateStats();
+
+  // ── Set icon values via JS after render — safe emoji handling ──
+  queue.forEach(item => {
+    const ic = document.getElementById('ic-' + item.id);
+    if (ic && ic.dataset.icon) ic.value = ic.dataset.icon;
+  });
+}
+
+function escHtml(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function toggleExpand(id){
+  const item = queue.find(q=>q.id===id);
+  if(!item || (item.status!=='pending' && item.status!=='error')) return;
+  item.expanded = !item.expanded;
+  const body = document.getElementById('body-'+id);
+  const chev = document.getElementById('chev-'+id);
+  if(body) body.classList.toggle('open', item.expanded);
+  if(chev) chev.classList.toggle('open', item.expanded);
+  document.getElementById('card-'+id)?.classList.toggle('editing', item.expanded);
+}
+
+function collapseCard(id, e){
+  e.stopPropagation();
+  const item = queue.find(q=>q.id===id);
+  if(item) item.expanded=false;
+  document.getElementById('body-'+id)?.classList.remove('open');
+  document.getElementById('chev-'+id)?.classList.remove('open');
+  document.getElementById('card-'+id)?.classList.remove('editing');
+}
+
+function saveCardMeta(id, e){
+  e.stopPropagation();
+  const item = queue.find(q=>q.id===id);
+  if(!item) return;
+  item.meta.title   = document.getElementById('t-'+id)?.value.trim() || item.meta.title;
+  item.meta.type    = document.getElementById('tp-'+id)?.value || item.meta.type;
+  item.meta.grades  = document.getElementById('gr-'+id)?.value || item.meta.grades;
+  item.meta.subject = document.getElementById('sb-'+id)?.value || '';
+  item.meta.desc    = document.getElementById('dc-'+id)?.value.trim() || '';
+  item.meta.pages   = parseInt(document.getElementById('pg-'+id)?.value) || 0;
+  item.meta.icon    = document.getElementById('ic-'+id)?.value || '📄';
+  collapseCard(id, e);
+  renderQueue();
+  toast(`Metadata saved for ${item.file.name.substring(0,30)}…`,'ok');
+}
+
+function toggleItemFree(id, e){
+  e.stopPropagation();
+  const item = queue.find(q=>q.id===id);
+  if(!item) return;
+  item.meta.free = !item.meta.free;
+  const btn = document.getElementById('fr-'+id);
+  if(btn) btn.classList.toggle('on', item.meta.free);
+  // update tag
+  renderQueue();
+}
+
+function removeFile(id, e){
+  e.stopPropagation();
+  queue = queue.filter(q=>q.id!==id);
+  if(!queue.length){
+    resetAll(); return;
+  }
+  renderQueue();
+  toast('File removed','info');
+}
+
+function applyAllFree(){
+  queue.forEach(q=>{ if(q.status==='pending') q.meta.free=true; });
+  renderQueue(); toast('All pending files set to Free','info');
+}
+function applyAllPremium(){
+  queue.forEach(q=>{ if(q.status==='pending') q.meta.free=false; });
+  renderQueue(); toast('All pending files set to Premium','info');
+}
+
+// ════════════════════════════════════════════
+// STATS
+// ════════════════════════════════════════════
+function updateStats(){
+  const total   = queue.length;
+  const done    = queue.filter(q=>q.status==='done').length;
+  const failed  = queue.filter(q=>q.status==='error').length;
+  const pending = queue.filter(q=>q.status==='pending').length;
+  document.getElementById('bbTotal').textContent   = total;
+  document.getElementById('bbDone').textContent    = done;
+  document.getElementById('bbFailed').textContent  = failed;
+  document.getElementById('bbPending').textContent = pending;
+}
+
+// ════════════════════════════════════════════
+// BATCH UPLOAD
+// ════════════════════════════════════════════
+async function startBatchUpload(){
+  if(uploadRunning){ toast('Upload already in progress','info'); return; }
+  const pending = queue.filter(q=>q.status==='pending'||q.status==='error');
+  if(!pending.length){ toast('No files to upload','info'); return; }
+
+  // Validate — every pending file must have title + type + grades
+  const invalid = pending.filter(q=>!q.meta.title||!q.meta.type||!q.meta.grades);
+  if(invalid.length){
+    toast(`${invalid.length} file${invalid.length>1?'s':''} missing required fields — open and fill in`,'err');
+    // Expand first invalid
+    invalid[0].expanded=true;
+    renderQueue();
+    return;
+  }
+
+  // Auth check
+  const user = auth.currentUser;
+  if(!user){ toast('Not signed in — open admin panel first','err'); return; }
+
+  uploadRunning = true;
+  setStep(3);
+  document.getElementById('uploadAllBtn').disabled=true;
+  document.getElementById('bbUploadBtn').disabled=true;
+  document.getElementById('bbMsg').textContent = 'Uploading…';
+
+  const token = await user.getIdToken();
+
+  let done=0, failed=0;
+  for(const item of pending){
+    await uploadOne(item, token);
+    if(item.status==='done') done++; else failed++;
+    updateStats();
+    // Refresh token every 10 files (tokens expire after 1h)
+    if((done+failed)%10===0){
+      try{ await user.getIdToken(true); }catch(_){}
+    }
+  }
+
+  uploadRunning = false;
+  showSummary(done, failed, queue.filter(q=>q.status==='pending').length);
+}
+
+async function uploadOne(item, token){
+  // Update UI
+  item.status   = 'uploading';
+  item.expanded = false;
+  const card = document.getElementById('card-'+item.id);
+  const pb   = document.getElementById('pb-'+item.id);
+  if(card){ card.className='file-card uploading'; }
+  if(pb){ pb.parentElement.className='fc-progress uploading'; }
+
+  try{
+    const m  = item.meta;
+    const fd = new FormData();
+    fd.append('file',    item.file);
+    fd.append('title',   m.title);
+    fd.append('desc',    m.desc||'');
+    fd.append('type',    m.type);
+    fd.append('grades',  m.grades);
+    fd.append('subject', m.subject||'');
+    fd.append('pages',   m.pages||'');
+    fd.append('icon',    m.icon||'📄');
+    fd.append('free',    m.free?'true':'false');
+
+    const res  = await fetch(`${BACKEND}/api/resources/upload`, {
+      method:'POST',
+      headers:{ Authorization:`Bearer ${token}` },
+      body: fd,
+    });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error||'Upload failed');
+
+    item.status = 'done';
+    if(card){ card.className='file-card done'; }
+    if(pb){ pb.parentElement.className='fc-progress done'; pb.style.width='100%'; }
+
+    // Update tags row
+    const tags = card?.querySelector('.fc-parsed');
+    if(tags) tags.innerHTML=`<span class="fp-tag" style="background:var(--greenlight);color:var(--green);border:1px solid rgba(45,125,70,.2)">✓ Uploaded</span>`;
+
+  }catch(e){
+    item.status = 'error';
+    item.error  = e.message.substring(0,40);
+    if(card){ card.className='file-card error'; }
+    if(pb){ pb.parentElement.className='fc-progress error'; }
+    console.error('[Upload]', item.file.name, e.message);
+  }
+}
+
+// ════════════════════════════════════════════
+// SUMMARY
+// ════════════════════════════════════════════
+function showSummary(done, failed, skipped){
+  document.getElementById('queueSection').style.display = 'none';
+  document.getElementById('bottomBar').style.display    = 'none';
+  document.getElementById('summarySection').classList.add('active');
+  document.getElementById('sumDone').textContent    = done;
+  document.getElementById('sumFailed').textContent  = failed;
+  document.getElementById('sumSkipped').textContent = skipped;
+  const msg = failed===0
+    ? `All ${done} resource${done!==1?'s':''} uploaded successfully to Cloudflare R2 and indexed in Firestore.`
+    : `${done} uploaded · ${failed} failed. Failed files are still in the queue — retry after checking your connection.`;
+  document.getElementById('summaryMsg').textContent = msg;
+  setStep(4);
+  if(done>0) toast(`✅ ${done} resource${done!==1?'s':''} uploaded`,'ok');
+  if(failed>0) toast(`❌ ${failed} failed — retry`,'err');
+}
+
+function resetAll(){
+  queue = [];
+  uploadRunning = false;
+  document.getElementById('dropSection').style.display  = '';
+  document.getElementById('queueSection').style.display = 'none';
+  document.getElementById('summarySection').classList.remove('active');
+  document.getElementById('bottomBar').style.display    = 'none';
+  document.getElementById('fileInput').value            = '';
+  document.getElementById('extraInput').value           = '';
+  setStep(1);
+}
+
+// ════════════════════════════════════════════
+// STEPS
+// ════════════════════════════════════════════
+function setStep(n){
+  [1,2,3,4].forEach(i=>{
+    const el = document.getElementById('step'+i);
+    el.className = 'step-item' + (i<n?' done':i===n?' active':'');
+  });
+}
+
+// ── Toast ──
+function toast(msg,type='ok'){
+  const t=document.createElement('div');
+  t.className=`t ${type}`;
+  t.innerHTML=`<span>${{ok:'✅',err:'❌',info:'ℹ️'}[type]||'ℹ️'}</span><span>${msg}</span>`;
+  document.getElementById('tc').appendChild(t);
+  setTimeout(()=>{t.style.animation='tout .25s ease forwards';setTimeout(()=>t.remove(),280);},3000);
+}
+</script>
+</body>
+</html>
