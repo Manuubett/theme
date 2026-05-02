@@ -69,3 +69,13 @@ app.listen(PORT, () => {
   console.log(`✅ CBE Resource Hub running on port ${PORT}`);
   console.log(`   Health: https://cbe-y1zb.onrender.com/api/health`);
 });
+
+// ── Firestore connection test ──
+app.get('/api/test-db', async (req, res) => {
+  try {
+    const snap = await admin.firestore().collection('resources').limit(1).get();
+    res.json({ ok: true, docs: snap.size });
+  } catch(e) {
+    res.status(500).json({ ok: false, error: e.message, code: e.code });
+  }
+});
