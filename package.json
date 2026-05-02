@@ -1,7 +1,7 @@
 {
-  "name": "instasend-backend",
+  "name": "cbe-resource-hub",
   "version": "1.0.0",
-  "description": "CBE Mark Sheet System + Resource Hub backend",
+  "description": "CBE Resource Hub — R2 + Firebase backend",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
