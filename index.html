@@ -505,7 +505,12 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);font
 
     <div class="sb-section">Resources</div>
     <button class="nav-item" onclick="switchPanel('upload',this)">
-      <span class="ni">⬆️</span> Upload Resource
+      <span class="ni">⬆️</span> Upload Single
+    </button>
+    <button class="nav-item" onclick="window.open('bulk-upload.html','_blank')"
+      style="background:linear-gradient(135deg,rgba(245,158,11,.12),rgba(59,130,246,.08));border:1px solid rgba(245,158,11,.2)">
+      <span class="ni">📦</span><span style="color:var(--gold)">Bulk Upload</span>
+      <span class="nav-badge" style="background:var(--gold);color:#000;margin-left:auto">NEW</span>
     </button>
     <button class="nav-item" onclick="switchPanel('manage',this)">
       <span class="ni">📁</span> Manage Files
@@ -522,6 +527,9 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);font
     </button>
 
     <div class="sb-section">Tools</div>
+    <button class="nav-item" onclick="window.open('bulk-upload.html','_blank')">
+      <span class="ni">📦</span> Bulk Upload Tool
+    </button>
     <button class="nav-item" onclick="window.open('resources.html','_blank')">
       <span class="ni">🔗</span> View Public Page
     </button>
@@ -597,6 +605,33 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);font
 
     <!-- ══ UPLOAD PANEL ══ -->
     <div class="panel" id="panel-upload">
+
+      <!-- Bulk upload banner -->
+      <div style="
+        background:linear-gradient(135deg,rgba(245,158,11,.1),rgba(59,130,246,.08));
+        border:1px solid rgba(245,158,11,.3);border-radius:var(--r);
+        padding:16px 20px;margin-bottom:20px;
+        display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="font-size:28px">📦</span>
+          <div>
+            <div style="font-size:14px;font-weight:700;color:var(--gold)">Upload Multiple Files at Once</div>
+            <div style="font-size:12px;color:var(--text2);margin-top:2px">
+              Drop up to 50 PDFs or DOCXs — auto-detects grade, subject and type from filenames
+            </div>
+          </div>
+        </div>
+        <button class="btn btn-gold" onclick="window.open('bulk-upload.html','_blank')" style="flex-shrink:0">
+          Open Bulk Upload →
+        </button>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+        <div style="flex:1;height:1px;background:var(--border)"></div>
+        <span style="font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.8px">or upload a single file below</span>
+        <div style="flex:1;height:1px;background:var(--border)"></div>
+      </div>
+
       <div class="two-col">
 
         <!-- Left: Drop zone + file info -->
@@ -831,14 +866,12 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);font
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 <script>
 firebase.initializeApp({
- apiKey: "AIzaSyDPZLbDio7OibE-FEXqFF1OdhM0qZc3yII",
-    authDomain: "divine-treat-450709-b5.firebaseapp.com",
-    databaseURL: "https://divine-treat-450709-b5-default-rtdb.firebaseio.com",
-    projectId: "divine-treat-450709-b5",
-    storageBucket: "divine-treat-450709-b5.firebasestorage.app",
-    messagingSenderId: "866518506476",
-    appId: "1:866518506476:web:e2d3618b61f88e1f6a3ec9",
-    measurementId: "G-B82PF7LK3H"
+  apiKey:            "AIzaSyDPZLbDio7OibE-FEXqFF1OdhM0qZc3yII",
+  authDomain:        "divine-treat-450709-b5.firebaseapp.com",
+  projectId:         "divine-treat-450709-b5",
+  storageBucket:     "divine-treat-450709-b5.firebasestorage.app",
+  messagingSenderId: "866518506476",
+  appId:             "1:866518506476:web:e2d3618b61f88e1f6a3ec9",
 });
 
 const db   = firebase.firestore();
