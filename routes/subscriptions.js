@@ -1,308 +1,442 @@
 /**
- * CBE Resource Hub — Subscription Routes
- * Handles M-Pesa payment webhook → subscription activation
- * Integrates with existing Paynecta webhook pipeline
+ * CBE Resource Hub — Subscriptions / Payments Route
+ * Mount: app.use('/api/subscriptions', require('./routes/subscriptions'))
+ *
+ * Required env vars:
+ *   PAYNECTA_API_KEY      – your API key from Paynecta dashboard
+ *   PAYNECTA_EMAIL        – your registered Paynecta email
+ *   PAYNECTA_CODE         – your merchant code
+ *   SERVER_URL            – your full backend URL (e.g. https://cbe-y1zb.onrender.com)
+ *
+ * Firebase (Firestore) is already initialised in server.js via admin.initializeApp()
  */
 
 const express = require('express');
-const admin   = require('firebase-admin');
 const axios   = require('axios');
-const router  = express.Router();
+const admin   = require('firebase-admin');
 
-const db = admin.firestore();
+const router = express.Router();
 
-// ── Plan config ──
-const PLANS = {
-  resource_termly: {
-    name:      'Termly Access',
-    months:    4,           // ~1 term
-    amount:    300,
-    label:     'termly',
-  },
-  resource_annual: {
-    name:      'Annual Access',
-    months:    12,
-    amount:    800,
-    label:     'annual',
-  },
-  resource_school: {
-    name:      'School License',
-    months:    4,
-    amount:    2500,
-    label:     'school',
-    isSchool:  true,
-  },
+// ── Paynecta config ───────────────────────────────────────────────────────────
+const API_KEY       = process.env.PAYNECTA_API_KEY;
+const USER_EMAIL    = process.env.PAYNECTA_EMAIL;
+const MERCHANT_CODE = process.env.PAYNECTA_CODE;
+const SERVER_BASE   = process.env.SERVER_URL || 'https://cbe-y1zb.onrender.com';
+const PAYNECTA_URL  = 'https://paynecta.co.ke/api/v1';
+
+if (!API_KEY)       console.error('❌ [Subscriptions] PAYNECTA_API_KEY not set');
+if (!USER_EMAIL)    console.warn('⚠️  [Subscriptions] PAYNECTA_EMAIL not set');
+if (!MERCHANT_CODE) console.warn('⚠️  [Subscriptions] PAYNECTA_CODE not set');
+
+// ── Plan definitions — must match frontend PLANS object keys ─────────────────
+const PLAN_CONFIG = {
+  resource_termly: { label: 'Termly Access',  amount: 99,   daysValid: 120 },
+  resource_annual: { label: 'Annual Access',  amount: 270,  daysValid: 365 },
+  resource_school: { label: 'School License', amount: 2500, daysValid: 120 },
 };
 
-// ── Tolerance: allow Ksh 5 underpayment (M-Pesa rounding) ──
-const TOLERANCE = 5;
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
-// ════════════════════════════════════════════
+const paynectaHeaders = () => ({
+  'X-API-Key':    API_KEY,
+  'X-User-Email': USER_EMAIL,
+  'Content-Type': 'application/json',
+});
+
+/** Normalise any Kenyan phone number to 2547XXXXXXXX */
+function normalisePhone(phone) {
+  let p = phone.toString().replace(/\D/g, '');
+  if (p.startsWith('0'))                      p = '254' + p.slice(1);
+  if (p.startsWith('7') || p.startsWith('1')) p = '254' + p;
+  if (!p.startsWith('254'))                   p = '254' + p;
+  return p;
+}
+
+const getDb = () => admin.firestore();
+
+/** Calculate ISO expiry string from now + N days */
+function calcExpiry(daysValid) {
+  const d = new Date();
+  d.setDate(d.getDate() + (daysValid || 120));
+  return d.toISOString();
+}
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ROUTE 1 — Initiate Payment
 // POST /api/subscriptions/initiate
-// Called by frontend before STK Push
-// Creates a pending subscription record so webhook can match it
-// ════════════════════════════════════════════
+// Body: { uid, planKey, phone, name }
+// Frontend expects back: { success, paymentId }
+// ══════════════════════════════════════════════════════════════════════════════
 router.post('/initiate', async (req, res) => {
-  const { uid, planKey, phone, name, schoolId } = req.body;
-  if (!uid || !planKey || !phone) {
-    return res.status(400).json({ error: 'uid, planKey and phone required' });
-  }
+  const { uid, planKey, phone, name } = req.body;
 
-  const plan = PLANS[planKey];
-  if (!plan) return res.status(400).json({ error: 'Invalid plan' });
+  if (!phone)
+    return res.status(400).json({ success: false, error: 'Phone number is required' });
+  if (!uid)
+    return res.status(400).json({ success: false, error: 'uid is required' });
+  if (!API_KEY || !USER_EMAIL || !MERCHANT_CODE)
+    return res.status(500).json({ success: false, error: 'Server misconfigured — missing Paynecta credentials' });
+
+  const plan   = PLAN_CONFIG[planKey] || PLAN_CONFIG['resource_termly'];
+  const mobile = normalisePhone(phone);
+
+  console.log(`[Initiate] uid=${uid} plan=${planKey} phone=${mobile}`);
 
   try {
-    // Verify uid exists in Firestore users
-    const userSnap = await db.collection('users').doc(uid).get();
-    if (!userSnap.exists) return res.status(404).json({ error: 'User not found' });
+    const paynectaPayload = {
+      code:          MERCHANT_CODE,
+      mobile_number: mobile,
+      amount:        plan.amount,
+      description:   `CBE Resource Hub — ${plan.label}`,
+      callback_url:  `${SERVER_BASE}/api/subscriptions/webhook`,
+    };
 
-    // Create pending subscription record
-    const ref = await db.collection('subscriptionPayments').add({
+    const response = await axios.post(
+      `${PAYNECTA_URL}/payment/initialize`,
+      paynectaPayload,
+      { headers: paynectaHeaders(), timeout: 15000 }
+    );
+
+    const txRef =
+      response.data?.data?.transaction_reference ||
+      response.data?.data?.CheckoutRequestID     ||
+      response.data?.transaction_reference       ||
+      `CBE-${Date.now()}`;
+
+    // Save pending payment — keyed by txRef
+    await getDb().collection('subscriptionPayments').doc(txRef).set({
+      txRef,
       uid,
-      planKey,
-      planName:  plan.name,
+      phone:     mobile,
+      name:      name      || '',
+      planKey:   planKey   || 'resource_termly',
+      planLabel: plan.label,
       amount:    plan.amount,
-      phone:     phone.replace(/\s/g, ''),
-      name:      name || userSnap.data().fullName || '',
-      schoolId:  schoolId || userSnap.data().schoolId || '',
+      daysValid: plan.daysValid,
       status:    'pending',
-      isSchool:  plan.isSchool || false,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    // Trigger STK Push via Paynecta
-    let stkRef = null;
-    try {
-      const stkRes = await axios.post(
-        'https://api.paynecta.com/stk-push',
-        {
-          merchantCode: process.env.PAYNECTA_CODE,
-          phone:        phone.replace(/\s/g, '').replace(/^0/, '254'),
-          amount:       plan.amount,
-          reference:    ref.id,                          // use our Firestore doc ID as ref
-          description:  `CBE Resources - ${plan.name}`,
-          callbackUrl:  `${process.env.BACKEND_URL}/api/subscriptions/webhook`,
-        },
-        {
-          headers: { Authorization: `Bearer ${process.env.PAYNECTA_SECRET}` },
-          timeout: 10000,
-        }
-      );
-      stkRef = stkRes.data?.txRef || stkRes.data?.reference || null;
-
-      // Store the Paynecta txRef for webhook matching
-      if (stkRef) {
-        await db.collection('subscriptionPayments').doc(ref.id).update({ txRef: stkRef });
-      }
-    } catch (stkErr) {
-      console.error('[STK Push error]', stkErr.message);
-      // Don't fail the whole request — let webhook handle it
-    }
+    console.log(`[Initiate] ✅ STK sent txRef=${txRef}`);
 
     res.json({
       success:   true,
-      paymentId: ref.id,
-      txRef:     stkRef,
-      amount:    plan.amount,
-      plan:      plan.name,
+      paymentId: txRef,  // frontend stores this (not used for polling but good to have)
+      txRef,
+      message:   'STK push sent. Check your phone.',
     });
-  } catch (e) {
-    console.error('[POST /subscriptions/initiate]', e.message);
-    res.status(500).json({ error: e.message });
+
+  } catch (err) {
+    console.error('[Initiate] Error:', err.response?.data || err.message);
+    res.status(400).json({ success: false, error: 'Failed to initiate payment. Please try again.' });
   }
 });
 
-// ════════════════════════════════════════════
-// POST /api/subscriptions/webhook
-// Paynecta webhook — activates subscription on confirmed payment
-// ════════════════════════════════════════════
-router.post('/webhook', express.json(), async (req, res) => {
-  // Acknowledge immediately — process async
-  res.status(200).json({ received: true });
 
-  try {
-    const body = req.body;
-    console.log('[Resource Webhook]', JSON.stringify(body));
-
-    // ── Parse Paynecta payload (same structure as your existing webhook) ──
-    const tx     = body?.data?.transaction || body?.data || body;
-    const status = (tx.status || '').toLowerCase();
-    const txRef  = tx.txRef || tx.reference || tx.tx_ref || '';
-    const amount = parseFloat(tx.amount || tx.charged_amount || 0);
-    const phone  = (tx.customer?.phone_number || tx.phone || '').replace(/\s/g, '');
-
-    if (!['completed', 'confirmed', 'successful', 'success'].includes(status)) {
-      console.log(`[Resource Webhook] Ignoring status: ${status}`);
-      await notifyTelegram(`ℹ️ Resource payment ${status}\nRef: ${txRef}\nAmount: ${amount}`);
-      return;
-    }
-
-    // ── Find the pending payment record ──
-    let payDoc = null;
-    let payRef  = null;
-
-    // Try by txRef first
-    if (txRef) {
-      const snap = await db.collection('subscriptionPayments')
-        .where('txRef', '==', txRef)
-        .where('status', '==', 'pending')
-        .limit(1).get();
-      if (!snap.empty) { payDoc = snap.docs[0].data(); payRef = snap.docs[0].ref; }
-    }
-
-    // Fallback: match by phone + pending + recent (last 30 min)
-    if (!payDoc && phone) {
-      const cutoff = new Date(Date.now() - 30 * 60 * 1000);
-      const snap = await db.collection('subscriptionPayments')
-        .where('phone', 'in', [phone, phone.replace(/^254/, '0')])
-        .where('status', '==', 'pending')
-        .where('createdAt', '>=', cutoff)
-        .orderBy('createdAt', 'desc')
-        .limit(1).get();
-      if (!snap.empty) { payDoc = snap.docs[0].data(); payRef = snap.docs[0].ref; }
-    }
-
-    if (!payDoc) {
-      console.warn('[Resource Webhook] No matching pending payment for', txRef, phone);
-      await notifyTelegram(`⚠️ Resource webhook — no match\nRef: ${txRef}\nPhone: ${phone}\nAmount: ${amount}`);
-      return;
-    }
-
-    const plan     = PLANS[payDoc.planKey];
-    const expected = plan?.amount || payDoc.amount;
-
-    // ── Amount check ──
-    if (amount < expected - TOLERANCE) {
-      await payRef.update({ status: 'underpaid', paidAmount: amount, txRef });
-      await notifyTelegram(
-        `⚠️ Resource underpayment\n` +
-        `Plan: ${payDoc.planName}\n` +
-        `Expected: Ksh ${expected} | Paid: Ksh ${amount}\n` +
-        `Phone: ${phone}`
-      );
-      return;
-    }
-
-    // ── Activate subscription ──
-    const now     = new Date();
-    const expires = new Date(now);
-    expires.setMonth(expires.getMonth() + (plan?.months || 4));
-
-    const subData = {
-      uid:       payDoc.uid,
-      planKey:   payDoc.planKey,
-      plan:      plan?.label || payDoc.planKey,
-      planName:  payDoc.planName,
-      status:    'active',
-      amount:    payDoc.amount,
-      paidAmount: amount,
-      phone:     payDoc.phone,
-      name:      payDoc.name,
-      schoolId:  payDoc.schoolId || '',
-      isSchool:  payDoc.isSchool || false,
-      txRef,
-      activatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      expiresAt: admin.firestore.FieldValue.serverTimestamp(), // overridden below
-      updatedAt:  admin.firestore.FieldValue.serverTimestamp(),
-    };
-
-    // Use a batch to update both documents atomically
-    const batch = db.batch();
-
-    // Write/merge subscription doc keyed by uid
-    const subRef = db.collection('subscriptions').doc(payDoc.uid);
-    batch.set(subRef, {
-      ...subData,
-      expiresAt:   expires,
-      activatedAt: now,
-      updatedAt:   now,
-    }, { merge: true });
-
-    // If school plan — also write school-level subscription
-    if (payDoc.isSchool && payDoc.schoolId) {
-      const schoolSubRef = db.collection('schoolSubscriptions').doc(payDoc.schoolId);
-      batch.set(schoolSubRef, {
-        schoolId:    payDoc.schoolId,
-        plan:        'school',
-        status:      'active',
-        activatedBy: payDoc.uid,
-        expiresAt:   expires,
-        activatedAt: now,
-        updatedAt:   now,
-      }, { merge: true });
-    }
-
-    // Mark payment as confirmed
-    batch.update(payRef, {
-      status:      'confirmed',
-      paidAmount:  amount,
-      txRef,
-      confirmedAt: now,
-    });
-
-    await batch.commit();
-
-    console.log(`[Resource Sub] Activated ${plan?.label} for ${payDoc.uid} until ${expires.toDateString()}`);
-
-    await notifyTelegram(
-      `✅ Resource subscription activated!\n` +
-      `Plan: ${payDoc.planName}\n` +
-      `Amount: Ksh ${amount}\n` +
-      `Phone: ${phone}\n` +
-      `Expires: ${expires.toDateString()}`
-    );
-
-  } catch (e) {
-    console.error('[Resource Webhook error]', e.message);
-    await notifyTelegram(`❌ Resource webhook error: ${e.message}`);
-  }
-});
-
-// ════════════════════════════════════════════
-// GET /api/subscriptions/status
-// Check current user's subscription status
-// Called by frontend after payment to confirm activation
-// ════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════════
+// ROUTE 2 — Subscription Status
+// GET /api/subscriptions/status?uid=FIREBASE_UID
+// GET /api/subscriptions/status?checkoutId=CBE-xxxxx  (fallback)
+// Frontend polls with ?uid= and checks: data.active === true
+// ══════════════════════════════════════════════════════════════════════════════
 router.get('/status', async (req, res) => {
-  const { uid } = req.query;
-  if (!uid) return res.status(400).json({ error: 'uid required' });
+  const { uid, checkoutId } = req.query;
+
+  if (!uid && !checkoutId)
+    return res.status(400).json({ success: false, error: 'uid or checkoutId is required' });
 
   try {
-    const snap = await db.collection('subscriptions').doc(uid).get();
-    if (!snap.exists) return res.json({ active: false });
+    const db = getDb();
 
-    const sub  = snap.data();
-    const now  = new Date();
-    const exp  = sub.expiresAt?.toDate?.() || new Date(sub.expiresAt);
-    const active = sub.status === 'active' && exp > now;
+    // ── Poll by uid (primary — what the frontend uses) ────────────────────────
+    if (uid) {
+      const subDoc = await db.collection('subscribers').doc(uid).get();
 
-    res.json({
-      active,
-      plan:      sub.plan || null,
-      planName:  sub.planName || null,
-      expiresAt: exp.toISOString(),
-      isSchool:  sub.isSchool || false,
-      daysLeft:  active ? Math.ceil((exp - now) / (1000 * 60 * 60 * 24)) : 0,
+      if (subDoc.exists) {
+        const sub       = subDoc.data();
+        const expiresAt = sub.expiresAt ? new Date(sub.expiresAt) : null;
+        const active    = expiresAt ? expiresAt > new Date() : !!sub.unlockedAt;
+
+        return res.json({
+          success:   true,
+          active,
+          expiresAt: sub.expiresAt || null,
+          plan:      sub.planKey   || 'resource_termly',
+          uid,
+        });
+      }
+
+      // Not a subscriber yet — return inactive so frontend keeps polling
+      return res.json({ success: true, active: false, expiresAt: null });
+    }
+
+    // ── Lookup by checkoutId (secondary) ─────────────────────────────────────
+    const payDoc = await db.collection('subscriptionPayments').doc(checkoutId).get();
+
+    if (!payDoc.exists)
+      return res.json({ success: true, status: 'pending', paid: false, active: false });
+
+    const data   = payDoc.data();
+    const isPaid = data.status === 'completed' || data.status === 'confirmed';
+
+    return res.json({
+      success:   true,
+      status:    isPaid ? 'completed' : (data.status || 'pending'),
+      paid:      isPaid,
+      active:    isPaid,
+      plan:      data.planKey || 'resource_termly',
+      uid:       data.uid     || null,
     });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
+
+  } catch (err) {
+    console.error('[Status] Error:', err.message);
+    res.status(500).json({ success: false, error: 'Could not check status' });
   }
 });
 
-// ════════════════════════════════════════════
-// TELEGRAM NOTIFICATIONS
-// ════════════════════════════════════════════
-async function notifyTelegram(msg) {
-  const token  = process.env.TELEGRAM_BOT_TOKEN;
-  const chatId = process.env.TELEGRAM_CHAT_ID;
-  if (!token || !chatId) return;
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ROUTE 3 — Paynecta Webhook
+// POST /api/subscriptions/webhook
+// express.raw() for this path is already set in server.js BEFORE express.json()
+// ══════════════════════════════════════════════════════════════════════════════
+router.post('/webhook', async (req, res) => {
+  res.json({ received: true }); // fast 200 first
+
   try {
-    await axios.post(`https://api.telegram.org/bot${token}/sendMessage`, {
-      chat_id:    chatId,
-      text:       `📚 [Resource Hub]\n${msg}`,
-      parse_mode: 'HTML',
-    }, { timeout: 5000 });
-  } catch (_) {}
-}
+    // Body arrives as raw Buffer when express.raw() is active
+    let payload;
+    if (Buffer.isBuffer(req.body)) {
+      payload = JSON.parse(req.body.toString('utf8'));
+    } else {
+      payload = req.body;
+    }
+
+    const data      = payload.data || {};
+    const tx        = data.transaction || {};
+    const txRef     = tx.reference || data.reference || payload.reference || null;
+    const rawStatus = tx.status    || data.status    || payload.status;
+    const eventType = payload.event_type || payload.event;
+    const mpesaCode = data.MpesaReceiptNumber || data.mpesa_receipt || null;
+    const mobile    = data.customer?.mobile_number || data.phone || null;
+
+    console.log('[Webhook]', { eventType, txRef, rawStatus, mpesaCode });
+
+    if (!txRef) return;
+
+    const db          = getDb();
+    const isCompleted = eventType === 'payment.completed' ||
+                        ['completed', 'confirmed', 'success'].includes(rawStatus);
+    const isFailed    = eventType === 'payment.failed'    ||
+                        ['failed', 'cancelled', 'timeout'].includes(rawStatus);
+
+    if (isCompleted) {
+      // 1. Mark payment completed
+      await db.collection('subscriptionPayments').doc(txRef).update({
+        status:      'completed',
+        mpesaCode:   mpesaCode || null,
+        completedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      // 2. Get payment record to find uid + plan
+      const payDoc  = await db.collection('subscriptionPayments').doc(txRef).get();
+      const payData = payDoc.exists ? payDoc.data() : {};
+      const uid     = payData.uid || null;
+      const phone   = (payData.phone || mobile || '').replace(/\D/g, '');
+      const plan    = PLAN_CONFIG[payData.planKey] || PLAN_CONFIG['resource_termly'];
+      const expiresAt = calcExpiry(plan.daysValid);
+
+      // 3. Write subscriber record keyed by Firebase uid (what frontend polls via /status?uid=)
+      if (uid) {
+        await db.collection('subscribers').doc(uid).set({
+          uid,
+          phone:      payData.phone || mobile,
+          planKey:    payData.planKey || 'resource_termly',
+          planLabel:  plan.label,
+          txRef,
+          mpesaCode:  mpesaCode || null,
+          expiresAt,
+          unlockedAt: admin.firestore.FieldValue.serverTimestamp(),
+          amount:     payData.amount || plan.amount,
+        }, { merge: true });
+
+        console.log(`[Webhook] ✅ Subscriber written uid=${uid} expires=${expiresAt}`);
+      }
+
+      // 4. Also index by phone for manual lookups
+      if (phone) {
+        await db.collection('subscribersByPhone').doc(phone).set({
+          uid,
+          phone:      payData.phone || mobile,
+          planKey:    payData.planKey || 'resource_termly',
+          txRef,
+          mpesaCode:  mpesaCode || null,
+          expiresAt,
+          unlockedAt: admin.firestore.FieldValue.serverTimestamp(),
+        }, { merge: true });
+      }
+
+      console.log(`[Webhook] ✅ Confirmed txRef=${txRef} mpesa=${mpesaCode}`);
+
+    } else if (isFailed) {
+      await db.collection('subscriptionPayments').doc(txRef).update({
+        status:   'failed',
+        failedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      console.log(`[Webhook] ❌ Failed txRef=${txRef}`);
+
+    } else {
+      await db.collection('subscriptionPayments').doc(txRef).update({
+        lastEvent:     eventType  || null,
+        lastRawStatus: rawStatus  || null,
+      });
+    }
+
+  } catch (err) {
+    console.error('[Webhook] Error:', err.message);
+  }
+});
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ROUTE 4 — Manual M-Pesa Code Bypass
+// POST /api/subscriptions/verify-bypass
+// Body: { code, uid? }
+// ══════════════════════════════════════════════════════════════════════════════
+router.post('/verify-bypass', async (req, res) => {
+  const { code, uid } = req.body;
+
+  if (!code)
+    return res.status(400).json({ success: false, error: 'M-Pesa code is required' });
+
+  const cleanCode = code.trim().toUpperCase();
+  const db        = getDb();
+
+  try {
+    // 1. Find payment by mpesaCode
+    const paySnap = await db.collection('subscriptionPayments')
+      .where('mpesaCode', '==', cleanCode)
+      .limit(1)
+      .get();
+
+    if (!paySnap.empty) {
+      const record = paySnap.docs[0].data();
+
+      if (record.status !== 'completed' && record.status !== 'confirmed') {
+        return res.json({
+          success: false,
+          error:   'Payment found but not yet confirmed. Wait a moment and try again.',
+        });
+      }
+
+      const plan      = PLAN_CONFIG[record.planKey] || PLAN_CONFIG['resource_termly'];
+      const expiresAt = calcExpiry(plan.daysValid);
+
+      // Grant access if uid supplied and webhook was missed
+      if (uid) {
+        await db.collection('subscribers').doc(uid).set({
+          uid,
+          phone:      record.phone,
+          planKey:    record.planKey || 'resource_termly',
+          planLabel:  plan.label,
+          txRef:      record.txRef,
+          mpesaCode:  cleanCode,
+          expiresAt,
+          unlockedAt: admin.firestore.FieldValue.serverTimestamp(),
+          amount:     record.amount,
+          bypassUsed: true,
+        }, { merge: true });
+        console.log(`[Bypass] ✅ Access granted uid=${uid} code=${cleanCode}`);
+      }
+
+      return res.json({
+        success:   true,
+        active:    true,
+        message:   'Payment verified',
+        plan:      record.planKey || 'resource_termly',
+        expiresAt,
+      });
+    }
+
+    // 2. Fallback — check subscribersByPhone
+    const subSnap = await db.collection('subscribersByPhone')
+      .where('mpesaCode', '==', cleanCode)
+      .limit(1)
+      .get();
+
+    if (!subSnap.empty) {
+      const sub = subSnap.docs[0].data();
+      console.log(`[Bypass] ✅ Found via subscribersByPhone code=${cleanCode}`);
+      return res.json({
+        success:   true,
+        active:    true,
+        message:   'Verified via subscriber record',
+        plan:      sub.planKey  || 'resource_termly',
+        expiresAt: sub.expiresAt || null,
+      });
+    }
+
+    return res.json({
+      success: false,
+      error:   'Code not found. If you just paid, wait 30 seconds and try again.',
+    });
+
+  } catch (err) {
+    console.error('[Bypass] Error:', err.message);
+    res.status(500).json({ success: false, error: 'Verification failed. Please try again.' });
+  }
+});
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ROUTE 5 — Check Subscriber by Phone (admin / debug)
+// GET /api/subscriptions/check/:phone
+// ══════════════════════════════════════════════════════════════════════════════
+router.get('/check/:phone', async (req, res) => {
+  const phone = req.params.phone.replace(/\D/g, '');
+
+  if (!phone)
+    return res.status(400).json({ success: false, error: 'Invalid phone number' });
+
+  try {
+    const doc = await getDb().collection('subscribersByPhone').doc(phone).get();
+    res.json({
+      success: true,
+      isPro:   doc.exists,
+      data:    doc.exists ? doc.data() : null,
+    });
+  } catch (err) {
+    console.error('[Check] Error:', err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ROUTE 6 — Test Paynecta Credentials
+// GET /api/subscriptions/test-paynecta
+// ══════════════════════════════════════════════════════════════════════════════
+router.get('/test-paynecta', async (req, res) => {
+  if (!API_KEY)
+    return res.status(500).json({ success: false, message: 'PAYNECTA_API_KEY not set' });
+
+  try {
+    const response = await axios.get(`${PAYNECTA_URL}/me`, {
+      headers:        paynectaHeaders(),
+      validateStatus: () => true,
+      timeout:        10000,
+    });
+    const ok = response.status < 400;
+    res.status(ok ? 200 : 400).json({
+      success: ok,
+      status:  response.status,
+      message: ok ? 'Paynecta API key valid ✅' : 'Paynecta API key rejected ❌',
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 
 module.exports = router;
