@@ -1,9 +1,7 @@
 <!--
-  CBE Resource Hub — Admin Panel v2
+  CBE Resource Hub — Admin Panel
   Copyright © 2026 Bett Emanuel — https://bett.website
-  + Grade 10–14 (Senior Secondary / CBE)
-  + Light / Dark theme toggle
-  + gradeNum + subjectId fields on upload
+  v2 — Full grade range (Grade 1–Form 5), light/dark toggle
 -->
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
@@ -16,249 +14,227 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
-/* ════ THEME VARIABLES ════ */
+/* ══ DARK THEME (default) ══ */
 :root,[data-theme="dark"]{
-  --bg:#07090f; --bg2:#0d1117; --bg3:#111827; --bg4:#1a2235;
-  --surf:#161e2e; --surf2:#1c2640;
-  --border:#1e2d45; --border2:#243352; --border3:#2d3f5e;
-  --text:#dce8ff; --text2:#7a90b8; --text3:#3d5070;
-  --accent:#3b82f6; --accent2:#1d4ed8; --alight:rgba(59,130,246,.1);
-  --gold:#f59e0b; --gold2:#d97706; --glight:rgba(245,158,11,.1);
-  --green:#10b981; --green2:#059669; --grnlight:rgba(16,185,129,.1);
-  --red:#ef4444; --redlight:rgba(239,68,68,.1);
+  --bg:#07090f;--bg2:#0d1117;--bg3:#111827;--bg4:#1a2235;
+  --surf:#161e2e;--surf2:#1c2640;
+  --border:#1e2d45;--border2:#243352;--border3:#2d3f5e;
+  --text:#dce8ff;--text2:#7a90b8;--text3:#3d5070;
+  --accent:#3b82f6;--accent2:#1d4ed8;--alight:rgba(59,130,246,.1);
+  --gold:#f59e0b;--gold2:#d97706;--glight:rgba(245,158,11,.1);
+  --green:#10b981;--green2:#059669;--grnlight:rgba(16,185,129,.1);
+  --red:#ef4444;--redlight:rgba(239,68,68,.1);
   --purple:#a78bfa;
+  --shadow:0 4px 24px rgba(0,0,0,.5);
   --toggle-icon:"🌙";
-  --sidebar-bg:var(--bg2);
-  --topbar-bg:var(--bg2);
 }
+
+/* ══ LIGHT THEME ══ */
 [data-theme="light"]{
-  --bg:#f0f4f8; --bg2:#ffffff; --bg3:#e8edf5; --bg4:#dde3ef;
-  --surf:#ffffff; --surf2:#f4f7fb;
-  --border:#dde3ef; --border2:#c5cfe0; --border3:#b0bfd4;
-  --text:#0f172a; --text2:#475569; --text3:#94a3b8;
-  --accent:#2563eb; --accent2:#1d4ed8; --alight:rgba(37,99,235,.08);
-  --gold:#d97706; --gold2:#b45309; --glight:rgba(217,119,6,.08);
-  --green:#059669; --green2:#047857; --grnlight:rgba(5,150,105,.08);
-  --red:#dc2626; --redlight:rgba(220,38,38,.08);
+  --bg:#f0f4f8;--bg2:#ffffff;--bg3:#e8edf5;--bg4:#dde4f0;
+  --surf:#ffffff;--surf2:#f5f8fc;
+  --border:#dde3ef;--border2:#c5cfe0;--border3:#b0bdd4;
+  --text:#0f172a;--text2:#475569;--text3:#94a3b8;
+  --accent:#2563eb;--accent2:#1d4ed8;--alight:rgba(37,99,235,.08);
+  --gold:#d97706;--gold2:#b45309;--glight:rgba(217,119,6,.08);
+  --green:#059669;--green2:#047857;--grnlight:rgba(5,150,105,.08);
+  --red:#dc2626;--redlight:rgba(220,38,38,.08);
   --purple:#7c3aed;
+  --shadow:0 2px 12px rgba(0,0,0,.08);
   --toggle-icon:"☀️";
-  --sidebar-bg:#ffffff;
-  --topbar-bg:#ffffff;
 }
 
 body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);font-size:14px;min-height:100vh;display:flex;transition:background .25s,color .25s}
 
-/* ── THEME TOGGLE ── */
+/* ══ THEME TOGGLE BUTTON ══ */
 .theme-toggle{
-  width:34px;height:34px;border-radius:8px;background:var(--bg3);
-  border:1px solid var(--border2);cursor:pointer;display:grid;
-  place-items:center;font-size:15px;transition:all .2s;flex-shrink:0;
+  width:34px;height:34px;border-radius:8px;
+  background:var(--bg3);border:1px solid var(--border2);
+  cursor:pointer;display:grid;place-items:center;
+  font-size:15px;transition:all .2s;flex-shrink:0;
 }
 .theme-toggle:hover{border-color:var(--accent);background:var(--bg4)}
 .theme-toggle::after{content:var(--toggle-icon)}
 
-/* ── SIDEBAR ── */
+/* ══ SIDEBAR ══ */
 .sidebar{
-  width:230px;min-height:100vh;background:var(--sidebar-bg);
-  border-right:1px solid var(--border);display:flex;flex-direction:column;
-  position:fixed;top:0;left:0;bottom:0;z-index:100;flex-shrink:0;
-  transition:background .25s,border-color .25s;
+  width:220px;min-height:100vh;background:var(--bg2);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  position:fixed;top:0;left:0;bottom:0;z-index:100;
+  flex-shrink:0;transition:background .25s,border-color .25s;
 }
-.sb-logo{padding:20px 18px 16px;border-bottom:1px solid var(--border)}
-.sb-logo-mark{width:32px;height:32px;background:var(--accent);border-radius:8px;display:grid;place-items:center;font-size:14px;font-weight:800;font-family:'JetBrains Mono',monospace;color:#fff;margin-bottom:10px}
-.sb-logo-name{font-size:13px;font-weight:700;letter-spacing:-.3px;color:var(--text)}
+.sb-logo{padding:20px 18px 16px;border-bottom:1px solid var(--border);}
+.sb-logo-mark{width:32px;height:32px;background:var(--accent);border-radius:8px;display:grid;place-items:center;font-size:14px;font-weight:800;font-family:'JetBrains Mono',monospace;color:#fff;margin-bottom:10px;}
+.sb-logo-name{font-size:13px;font-weight:700;letter-spacing:-.3px}
 .sb-logo-sub{font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace;margin-top:2px}
 .sb-nav{flex:1;padding:12px 10px;display:flex;flex-direction:column;gap:2px}
 .sb-section{font-size:9.5px;font-weight:700;color:var(--text3);letter-spacing:.8px;text-transform:uppercase;padding:10px 8px 4px;margin-top:4px}
-.nav-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:6px;font-size:13px;font-weight:500;color:var(--text2);cursor:pointer;transition:all .14s;border:none;background:none;width:100%;text-align:left;font-family:'Outfit',sans-serif}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:6px;font-size:13px;font-weight:500;color:var(--text2);cursor:pointer;transition:all .14s;border:none;background:none;width:100%;text-align:left;font-family:'Outfit',sans-serif;}
 .nav-item:hover{background:var(--bg4);color:var(--text)}
 .nav-item.active{background:var(--alight);color:var(--accent);font-weight:600}
 .nav-item .ni{font-size:15px;width:18px;text-align:center;flex-shrink:0}
-.nav-badge{margin-left:auto;background:var(--accent);color:#fff;font-size:9px;font-weight:700;padding:1px 6px;border-radius:10px;font-family:'JetBrains Mono',monospace}
+.nav-badge{margin-left:auto;background:var(--accent);color:#fff;font-size:9px;font-weight:700;padding:1px 6px;border-radius:10px;font-family:'JetBrains Mono',monospace;}
 .sb-footer{padding:14px 12px;border-top:1px solid var(--border)}
 .sb-user{display:flex;align-items:center;gap:8px}
-.sb-avatar{width:30px;height:30px;border-radius:8px;background:var(--alight);border:1px solid var(--border2);display:grid;place-items:center;font-size:12px;flex-shrink:0}
-.sb-uname{font-size:12px;font-weight:600;line-height:1.2;color:var(--text)}
+.sb-avatar{width:30px;height:30px;border-radius:8px;background:var(--alight);border:1px solid var(--border2);display:grid;place-items:center;font-size:12px;flex-shrink:0;}
+.sb-uname{font-size:12px;font-weight:600;line-height:1.2}
 .sb-urole{font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace}
 
-/* ── MAIN ── */
-.main{margin-left:230px;flex:1;display:flex;flex-direction:column;min-height:100vh}
-.topbar{background:var(--topbar-bg);border-bottom:1px solid var(--border);padding:0 24px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:90;transition:background .25s,border-color .25s}
-.topbar-title{font-size:15px;font-weight:700;letter-spacing:-.3px;color:var(--text)}
+/* ══ MAIN ══ */
+.main{margin-left:220px;flex:1;display:flex;flex-direction:column;min-height:100vh}
+.topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 24px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:90;transition:background .25s,border-color .25s;}
+.topbar-title{font-size:15px;font-weight:700;letter-spacing:-.3px}
 .topbar-r{display:flex;align-items:center;gap:10px}
 .content{padding:24px;flex:1}
 
-/* ── BUTTONS ── */
-.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:8px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .14s;white-space:nowrap}
-.btn-primary{background:var(--accent);color:#fff}
-.btn-primary:hover{background:var(--accent2)}
-.btn-gold{background:var(--gold);color:#000}
-.btn-gold:hover{background:var(--gold2)}
-.btn-green{background:var(--green);color:#fff}
-.btn-green:hover{background:var(--green2)}
-.btn-danger{background:var(--redlight);color:var(--red);border:1px solid rgba(239,68,68,.25)}
-.btn-danger:hover{background:var(--red);color:#fff}
-.btn-outline{background:none;border:1px solid var(--border2);color:var(--text2)}
-.btn-outline:hover{background:var(--bg4);color:var(--text);border-color:var(--border3)}
-.btn-sm{padding:5px 11px;font-size:12px}
-.btn-xs{padding:3px 8px;font-size:11px}
+/* ══ BUTTONS ══ */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:8px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .14s;white-space:nowrap;}
+.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:var(--accent2)}
+.btn-gold{background:var(--gold);color:#000}.btn-gold:hover{background:var(--gold2)}
+.btn-green{background:var(--green);color:#fff}.btn-green:hover{background:var(--green2)}
+.btn-danger{background:var(--redlight);color:var(--red);border:1px solid rgba(239,68,68,.25)}.btn-danger:hover{background:var(--red);color:#fff}
+.btn-outline{background:none;border:1px solid var(--border2);color:var(--text2)}.btn-outline:hover{background:var(--bg4);color:var(--text);border-color:var(--border3)}
+.btn-sm{padding:5px 11px;font-size:12px}.btn-xs{padding:3px 8px;font-size:11px}
 
-/* ── STAT CARDS ── */
+/* ══ STAT CARDS ══ */
 .stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px}
-.stat-card{background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:18px 20px;position:relative;overflow:hidden;transition:background .25s,border-color .25s}
-.stat-card::after{content:'';position:absolute;top:0;right:0;width:60px;height:60px;border-radius:0 12px 0 60px;opacity:.08}
-.stat-card.blue::after{background:var(--accent)}
-.stat-card.gold::after{background:var(--gold)}
-.stat-card.green::after{background:var(--green)}
-.stat-card.purple::after{background:var(--purple)}
+.stat-card{background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:18px 20px;position:relative;overflow:hidden;box-shadow:var(--shadow);transition:background .25s,border-color .25s;}
+.stat-card::after{content:'';position:absolute;top:0;right:0;width:60px;height:60px;border-radius:0 12px 0 60px;opacity:.08;}
+.stat-card.blue::after{background:var(--accent)}.stat-card.gold::after{background:var(--gold)}.stat-card.green::after{background:var(--green)}.stat-card.purple::after{background:var(--purple)}
 .stat-label{font-size:10.5px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px}
 .stat-val{font-size:28px;font-weight:800;font-family:'JetBrains Mono',monospace;line-height:1}
-.stat-val.blue{color:var(--accent)}
-.stat-val.gold{color:var(--gold)}
-.stat-val.green{color:var(--green)}
-.stat-val.purple{color:var(--purple)}
+.stat-val.blue{color:var(--accent)}.stat-val.gold{color:var(--gold)}.stat-val.green{color:var(--green)}.stat-val.purple{color:var(--purple)}
 .stat-sub{font-size:11px;color:var(--text3);margin-top:6px}
 
-/* ── PANELS ── */
-.panel{display:none}
-.panel.active{display:block}
+/* ══ PANELS ══ */
+.panel{display:none}.panel.active{display:block}
 
-/* ── UPLOAD ZONE ── */
-.upload-zone{border:2px dashed var(--border2);border-radius:12px;padding:40px 24px;text-align:center;cursor:pointer;transition:all .2s;background:var(--surf);margin-bottom:20px;position:relative}
-.upload-zone:hover,.upload-zone.drag{border-color:var(--accent);background:var(--alight)}
+/* ══ UPLOAD ZONE ══ */
+.upload-zone{border:2px dashed var(--border2);border-radius:12px;padding:40px 24px;text-align:center;cursor:pointer;transition:all .2s;background:var(--surf);margin-bottom:20px;position:relative;}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--accent);background:var(--alight);}
 .upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
 .uz-icon{font-size:36px;margin-bottom:12px;display:block}
-.uz-title{font-size:16px;font-weight:700;margin-bottom:4px;color:var(--text)}
+.uz-title{font-size:16px;font-weight:700;margin-bottom:4px}
 .uz-sub{font-size:12.5px;color:var(--text2)}
 .uz-types{display:inline-flex;gap:6px;margin-top:12px}
-.uz-type{padding:2px 10px;border-radius:4px;font-size:10.5px;font-weight:700;font-family:'JetBrains Mono',monospace}
+.uz-type{padding:2px 10px;border-radius:4px;font-size:10.5px;font-weight:700;font-family:'JetBrains Mono',monospace;}
 .uz-type.pdf{background:rgba(239,68,68,.15);color:#f87171}
 .uz-type.docx{background:rgba(59,130,246,.15);color:#60a5fa}
 
-/* ── FILE PREVIEW ── */
-.file-preview{background:var(--surf);border:1px solid var(--border2);border-radius:12px;padding:16px;margin-bottom:20px;display:none;transition:background .25s}
+/* ══ FILE PREVIEW ══ */
+.file-preview{background:var(--surf);border:1px solid var(--border2);border-radius:12px;padding:16px;margin-bottom:20px;display:none;transition:background .25s;}
 .fp-head{display:flex;align-items:center;gap:12px;margin-bottom:14px}
-.fp-icon{width:44px;height:44px;border-radius:10px;display:grid;place-items:center;font-size:20px;flex-shrink:0}
-.fp-icon.pdf{background:rgba(239,68,68,.12)}
-.fp-icon.docx{background:rgba(59,130,246,.12)}
-.fp-name{font-size:13px;font-weight:700;line-height:1.3;color:var(--text)}
+.fp-icon{width:44px;height:44px;border-radius:10px;display:grid;place-items:center;font-size:20px;flex-shrink:0;}
+.fp-icon.pdf{background:rgba(239,68,68,.12)}.fp-icon.docx{background:rgba(59,130,246,.12)}
+.fp-name{font-size:13px;font-weight:700;line-height:1.3}
 .fp-size{font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace;margin-top:2px}
 .fp-clear{margin-left:auto}
 
-/* ── FORM ── */
+/* ══ FORM ══ */
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-.form-grid.cols3{grid-template-columns:1fr 1fr 1fr}
 .form-row{display:flex;flex-direction:column;gap:5px}
-.form-label{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
-.form-label .opt{font-weight:400;color:var(--text3);text-transform:none;letter-spacing:0;font-size:10px}
-.form-input,.form-select,.form-textarea{padding:9px 13px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-family:'Outfit',sans-serif;font-size:13.5px;outline:none;transition:border-color .15s,background .25s;width:100%}
+.form-label{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;}
+.form-input,.form-select,.form-textarea{padding:9px 13px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-family:'Outfit',sans-serif;font-size:13.5px;outline:none;transition:border-color .15s,background .25s;width:100%;}
 .form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--accent)}
 .form-input::placeholder,.form-textarea::placeholder{color:var(--text3)}
-.form-select option{background:var(--bg3);color:var(--text)}
+.form-select option,.form-select optgroup{background:var(--bg3);color:var(--text)}
 .form-textarea{resize:vertical;min-height:72px;line-height:1.5}
-.toggle-row{display:flex;align-items:center;justify-content:space-between;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:10px 13px;transition:background .25s}
-.toggle-label{font-size:13px;font-weight:500;color:var(--text)}
+
+/* Grade optgroup styling hint */
+.form-select optgroup{font-weight:700;font-size:11px;color:var(--text3)}
+
+.toggle-row{display:flex;align-items:center;justify-content:space-between;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:10px 13px;transition:background .25s;}
+.toggle-label{font-size:13px;font-weight:500}
 .toggle-sub{font-size:11px;color:var(--text3);margin-top:1px}
-.toggle{width:40px;height:22px;background:var(--border2);border-radius:11px;position:relative;cursor:pointer;transition:background .2s;flex-shrink:0;border:none}
+.toggle{width:40px;height:22px;background:var(--border2);border-radius:11px;position:relative;cursor:pointer;transition:background .2s;flex-shrink:0;border:none;}
 .toggle.on{background:var(--green)}
-.toggle::after{content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .2s}
+.toggle::after{content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .2s;}
 .toggle.on::after{transform:translateX(18px)}
 
-/* ── GRADE BAND TAGS ── */
-.band-tag{display:inline-block;font-size:9.5px;font-weight:700;padding:1px 7px;border-radius:3px;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.3px;margin-left:4px}
-.band-primary{background:rgba(16,185,129,.12);color:var(--green)}
-.band-junior{background:rgba(59,130,246,.12);color:var(--accent)}
-.band-senior{background:rgba(245,158,11,.12);color:var(--gold)}
-
-/* ── PROGRESS ── */
+/* ══ PROGRESS BAR ══ */
 .upload-progress{display:none;margin-bottom:16px}
 .up-bar-wrap{background:var(--bg3);border-radius:4px;height:6px;overflow:hidden;margin-bottom:8px}
 .up-bar{height:100%;background:var(--accent);border-radius:4px;width:0%;transition:width .3s}
 .up-status{font-size:12px;color:var(--text2);display:flex;justify-content:space-between}
 
-/* ── TABLE ── */
-.tbl-card{background:var(--surf);border:1px solid var(--border);border-radius:12px;overflow:hidden;transition:background .25s,border-color .25s}
-.tbl-head{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
-.tbl-search{padding:7px 12px 7px 34px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-family:'Outfit',sans-serif;font-size:13px;outline:none;width:240px;transition:border-color .15s,width .2s,background .25s}
+/* ══ TABLE ══ */
+.tbl-card{background:var(--surf);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:var(--shadow);transition:background .25s,border-color .25s;}
+.tbl-head{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.tbl-search{padding:7px 12px 7px 34px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-family:'Outfit',sans-serif;font-size:13px;outline:none;width:240px;transition:border-color .15s,width .2s,background .25s;}
 .tbl-search:focus{border-color:var(--accent);width:280px}
 .tbl-search::placeholder{color:var(--text3)}
 .tbl-search-wrap{position:relative}
 .tbl-search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--text3)}
 .data-table{width:100%;border-collapse:collapse}
-.data-table th{background:var(--bg2);padding:10px 14px;text-align:left;font-size:10.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);white-space:nowrap;transition:background .25s}
-.data-table td{padding:12px 14px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle;color:var(--text)}
+.data-table th{background:var(--bg2);padding:10px 14px;text-align:left;font-size:10.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);white-space:nowrap;transition:background .25s;}
+.data-table td{padding:12px 14px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle;transition:background .1s;}
 .data-table tr:last-child td{border-bottom:none}
-.data-table tbody tr:hover td{background:var(--bg4)}
-.data-table tbody tr{transition:background .1s}
+.data-table tr:hover td{background:var(--bg4)}
 .res-title-cell{font-weight:600;max-width:220px}
-.res-title-cell .rt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;color:var(--text)}
+.res-title-cell .rt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
 .res-title-cell .rs{font-size:11px;color:var(--text3);margin-top:2px}
 
-/* ── BADGES ── */
-.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;font-family:'JetBrains Mono',monospace;white-space:nowrap}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;font-family:'JetBrains Mono',monospace;white-space:nowrap;}
 .badge-free{background:var(--grnlight);color:var(--green);border:1px solid rgba(16,185,129,.25)}
 .badge-premium{background:var(--glight);color:var(--gold);border:1px solid rgba(245,158,11,.25)}
 .badge-pdf{background:var(--redlight);color:#f87171;border:1px solid rgba(239,68,68,.2)}
 .badge-docx{background:var(--alight);color:#60a5fa;border:1px solid rgba(59,130,246,.2)}
 .badge-type{background:var(--bg4);color:var(--text2);border:1px solid var(--border2)}
-.badge-primary{background:rgba(16,185,129,.1);color:var(--green);border:1px solid rgba(16,185,129,.2)}
-.badge-junior{background:rgba(59,130,246,.1);color:var(--accent);border:1px solid rgba(59,130,246,.2)}
-.badge-senior{background:rgba(245,158,11,.1);color:var(--gold);border:1px solid rgba(245,158,11,.2)}
+.badge-cbe{background:rgba(167,139,250,.1);color:var(--purple);border:1px solid rgba(167,139,250,.25)}
 
 .dl-count{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent)}
 .tbl-actions{display:flex;gap:5px;align-items:center}
 
-/* ── SUBSCRIBER TABLE ── */
+/* ══ SUBSCRIBER TABLE ══ */
 .sub-status-active{color:var(--green);font-weight:700;font-size:12px}
 .sub-status-expired{color:var(--red);font-size:12px}
 .sub-status-pending{color:var(--gold);font-size:12px}
 .exp-date{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--text2)}
 
-/* ── MODALS ── */
-.modal-overlay{display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:20px}
+/* ══ MODALS ══ */
+.modal-overlay{display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:20px;}
 .modal-overlay.open{display:flex}
-.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:28px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,.8);transition:background .25s}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:28px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,.8);transition:background .25s;}
 .modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px}
-.modal-title{font-size:16px;font-weight:700;color:var(--text)}
-.modal-close{background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;padding:4px;line-height:1}
+.modal-title{font-size:16px;font-weight:700}
+.modal-close{background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;padding:4px;line-height:1;}
 .modal-close:hover{color:var(--text)}
 .del-modal{max-width:380px}
 .del-icon{font-size:40px;text-align:center;margin-bottom:12px}
-.del-title{font-size:16px;font-weight:700;text-align:center;margin-bottom:8px;color:var(--text)}
+.del-title{font-size:16px;font-weight:700;text-align:center;margin-bottom:8px}
 .del-sub{font-size:13px;color:var(--text2);text-align:center;line-height:1.6;margin-bottom:20px}
 .del-name{color:var(--red);font-weight:700}
 
-/* ── TOP LIST ── */
+/* ══ DASHBOARD CARDS ══ */
 .two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
-.section-card{background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:20px;transition:background .25s,border-color .25s}
-.section-title{font-size:14px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px;color:var(--text)}
+.section-card{background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:20px;box-shadow:var(--shadow);transition:background .25s,border-color .25s;}
+.section-title{font-size:14px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px}
 .top-list{display:flex;flex-direction:column;gap:8px}
-.top-item{display:flex;align-items:center;gap:12px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:10px 14px;transition:background .25s}
+.top-item{display:flex;align-items:center;gap:12px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:10px 14px;transition:background .25s;}
 .top-rank{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:var(--text3);width:20px;flex-shrink:0;text-align:right}
-.top-rank.gold{color:var(--gold)}
-.top-rank.silver{color:#94a3b8}
-.top-rank.bronze{color:#b45309}
+.top-rank.gold{color:var(--gold)}.top-rank.silver{color:#94a3b8}.top-rank.bronze{color:#b45309}
 .top-info{flex:1;min-width:0}
-.top-title{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
+.top-title{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .top-type{font-size:11px;color:var(--text3)}
 .top-dl{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--accent);flex-shrink:0}
 
-/* ── CHIPS ── */
+/* ══ CHIPS ══ */
 .chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
-.chip{padding:4px 12px;border-radius:20px;font-size:11.5px;font-weight:600;border:1px solid var(--border2);background:none;color:var(--text2);cursor:pointer;transition:all .13s;font-family:'Outfit',sans-serif}
+.chip{padding:4px 12px;border-radius:20px;font-size:11.5px;font-weight:600;border:1px solid var(--border2);background:none;color:var(--text2);cursor:pointer;transition:all .13s;font-family:'Outfit',sans-serif;}
 .chip:hover{border-color:var(--accent);color:var(--accent)}
 .chip.active{background:var(--accent);border-color:var(--accent);color:#fff}
 
-/* ── EMPTY ── */
+/* ══ EMPTY ══ */
 .empty{text-align:center;padding:48px 20px;color:var(--text3)}
 .empty-icon{font-size:36px;margin-bottom:12px}
 .empty-title{font-size:15px;font-weight:600;color:var(--text2);margin-bottom:6px}
 .empty-sub{font-size:12.5px}
 
-/* ── TOAST ── */
+/* ══ TOAST ══ */
 #tc{position:fixed;top:62px;right:16px;z-index:9999;display:flex;flex-direction:column;gap:6px;pointer-events:none}
-.t{display:flex;align-items:center;gap:8px;padding:10px 16px;border-radius:8px;font-size:12.5px;font-weight:500;box-shadow:0 8px 32px rgba(0,0,0,.6);animation:tin .25s ease;min-width:220px;pointer-events:auto}
-.t.ok{background:#064e3b;color:#ecfdf5;border-left:3px solid var(--green)}
+.t{display:flex;align-items:center;gap:8px;padding:10px 16px;border-radius:8px;font-size:12.5px;font-weight:500;box-shadow:0 8px 32px rgba(0,0,0,.3);animation:tin .25s ease;min-width:220px;pointer-events:auto;}
+.t.ok {background:#064e3b;color:#ecfdf5;border-left:3px solid var(--green)}
 .t.err{background:#7f1d1d;color:#fef2f2;border-left:3px solid var(--red)}
 .t.info{background:#1e3a5f;color:#dbeafe;border-left:3px solid var(--accent)}
 [data-theme="light"] .t.ok{background:#d1fae5;color:#064e3b}
@@ -266,24 +242,28 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);font
 [data-theme="light"] .t.info{background:#dbeafe;color:#1e3a5f}
 @keyframes tin{from{transform:translateX(110%);opacity:0}to{transform:translateX(0);opacity:1}}
 @keyframes tout{to{transform:translateX(110%);opacity:0}}
+
+/* ══ SPINNER ══ */
 .spin{width:16px;height:16px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:sp .65s linear infinite;flex-shrink:0}
 @keyframes sp{to{transform:rotate(360deg)}}
 
-/* ── LOGIN GATE ── */
-#loginGate{position:fixed;inset:0;z-index:999;background:var(--bg);display:flex;align-items:center;justify-content:center;transition:background .25s}
-.login-box{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:36px;width:100%;max-width:380px;text-align:center;transition:background .25s}
+/* ══ LOGIN GATE ══ */
+#loginGate{position:fixed;inset:0;z-index:999;background:var(--bg);display:flex;align-items:center;justify-content:center;transition:background .25s;}
+.login-box{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:36px;width:100%;max-width:380px;text-align:center;transition:background .25s;}
 .login-logo{font-size:36px;margin-bottom:16px}
-.login-title{font-size:20px;font-weight:800;margin-bottom:6px;color:var(--text)}
+.login-title{font-size:20px;font-weight:800;margin-bottom:6px}
 .login-sub{font-size:13px;color:var(--text2);margin-bottom:24px}
 
 @media(max-width:900px){
-  .two-col,.form-grid,.form-grid.cols3{grid-template-columns:1fr}
+  .two-col{grid-template-columns:1fr}
   .sidebar{transform:translateX(-100%)}
   .main{margin-left:0}
+  .form-grid{grid-template-columns:1fr}
 }
 </style>
 </head>
 <body>
+
 <div id="tc"></div>
 
 <!-- LOGIN GATE -->
@@ -334,30 +314,16 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);font
           </select>
         </div>
         <div class="form-row">
-          <label class="form-label">Grade Band</label>
-          <select class="form-select" id="editGradeBand" onchange="syncEditGradeNum()">
-            <option value="primary">🟢 Primary (Grade 1–6)</option>
-            <option value="junior">🔵 Junior Secondary (Grade 7–9)</option>
-            <option value="senior">🟡 Senior Secondary (Form 1–5)</option>
+          <label class="form-label">Grade / Form</label>
+          <select class="form-select" id="editGrades">
+            <!-- Populated by JS -->
           </select>
-        </div>
-      </div>
-      <div class="form-grid">
-        <div class="form-row">
-          <label class="form-label">Specific Grade</label>
-          <select class="form-select" id="editGradeNum">
-            <option value="">— All in band —</option>
-          </select>
-        </div>
-        <div class="form-row">
-          <label class="form-label">Subject</label>
-          <input class="form-input" id="editSubject" placeholder="e.g. Mathematics">
         </div>
       </div>
       <div class="form-row">
-        <label class="form-label">Subject ID <span class="opt">(for filtering)</span></label>
-        <select class="form-select" id="editSubjectId">
-          <option value="">— Select subject ID —</option>
+        <label class="form-label">Subject</label>
+        <select class="form-select" id="editSubject">
+          <!-- Populated by JS -->
         </select>
       </div>
       <div class="toggle-row">
@@ -380,7 +346,10 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);font
   <div class="modal del-modal">
     <div class="del-icon">🗑️</div>
     <div class="del-title">Delete Resource?</div>
-    <div class="del-sub"><span class="del-name" id="delName">—</span><br>This permanently removes the file from R2 and Firestore. Cannot be undone.</div>
+    <div class="del-sub">
+      <span class="del-name" id="delName">—</span><br>
+      This permanently removes the file from R2 and Firestore. Cannot be undone.
+    </div>
     <div style="display:flex;gap:10px">
       <button class="btn btn-outline" style="flex:1;justify-content:center" onclick="closeDelete()">Cancel</button>
       <button class="btn btn-danger" style="flex:1;justify-content:center" onclick="confirmDelete()" id="delBtn">Delete Forever</button>
@@ -400,9 +369,19 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);font
     <button class="nav-item active" onclick="switchPanel('dashboard',this)"><span class="ni">📊</span> Dashboard</button>
     <div class="sb-section">Resources</div>
     <button class="nav-item" onclick="switchPanel('upload',this)"><span class="ni">⬆️</span> Upload Single</button>
-    <button class="nav-item" onclick="switchPanel('manage',this)"><span class="ni">📁</span> Manage Files <span class="nav-badge" id="resCountBadge">—</span></button>
+    <button class="nav-item" onclick="window.open('bulk-upload.html','_blank')" style="background:linear-gradient(135deg,rgba(245,158,11,.12),rgba(59,130,246,.08));border:1px solid rgba(245,158,11,.2)">
+      <span class="ni">📦</span><span style="color:var(--gold)">Bulk Upload</span>
+      <span class="nav-badge" style="background:var(--gold);color:#000;margin-left:auto">NEW</span>
+    </button>
+    <button class="nav-item" onclick="switchPanel('manage',this)">
+      <span class="ni">📁</span> Manage Files
+      <span class="nav-badge" id="resCountBadge">—</span>
+    </button>
     <div class="sb-section">Subscriptions</div>
-    <button class="nav-item" onclick="switchPanel('subscribers',this)"><span class="ni">👥</span> Subscribers <span class="nav-badge" id="subCountBadge">—</span></button>
+    <button class="nav-item" onclick="switchPanel('subscribers',this)">
+      <span class="ni">👥</span> Subscribers
+      <span class="nav-badge" id="subCountBadge">—</span>
+    </button>
     <button class="nav-item" onclick="switchPanel('payments',this)"><span class="ni">💳</span> Payments</button>
     <div class="sb-section">Tools</div>
     <button class="nav-item" onclick="window.open('resources.html','_blank')"><span class="ni">🔗</span> View Public Page</button>
@@ -410,7 +389,10 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);font
   <div class="sb-footer">
     <div class="sb-user">
       <div class="sb-avatar">👤</div>
-      <div><div class="sb-uname" id="sidebarName">Loading…</div><div class="sb-urole">owner</div></div>
+      <div>
+        <div class="sb-uname" id="sidebarName">Loading…</div>
+        <div class="sb-urole">owner</div>
+      </div>
     </div>
     <button class="btn btn-outline btn-sm" style="margin-top:10px;width:100%;justify-content:center;font-size:11px" onclick="doLogout()">Sign Out</button>
   </div>
@@ -422,19 +404,35 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);font
     <div class="topbar-title" id="topbarTitle">Dashboard</div>
     <div class="topbar-r">
       <div style="font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace" id="topbarTime"></div>
-      <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark/light mode"></button>
+      <button class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode"></button>
     </div>
   </div>
 
   <div class="content">
 
-    <!-- DASHBOARD -->
+    <!-- ══ DASHBOARD ══ -->
     <div class="panel active" id="panel-dashboard">
       <div class="stats-row">
-        <div class="stat-card blue"><div class="stat-label">Total Resources</div><div class="stat-val blue" id="st-total">—</div><div class="stat-sub" id="st-breakdown">Loading…</div></div>
-        <div class="stat-card green"><div class="stat-label">Total Downloads</div><div class="stat-val green" id="st-dl">—</div><div class="stat-sub" id="st-dl30">Last 30 days: —</div></div>
-        <div class="stat-card gold"><div class="stat-label">Active Subscribers</div><div class="stat-val gold" id="st-subs">—</div><div class="stat-sub">Paid plans</div></div>
-        <div class="stat-card purple"><div class="stat-label">Est. Revenue</div><div class="stat-val purple" id="st-rev">—</div><div class="stat-sub">This term</div></div>
+        <div class="stat-card blue">
+          <div class="stat-label">Total Resources</div>
+          <div class="stat-val blue" id="st-total">—</div>
+          <div class="stat-sub" id="st-breakdown">Loading…</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-label">Total Downloads</div>
+          <div class="stat-val green" id="st-dl">—</div>
+          <div class="stat-sub" id="st-dl30">Last 30 days: —</div>
+        </div>
+        <div class="stat-card gold">
+          <div class="stat-label">Active Subscribers</div>
+          <div class="stat-val gold" id="st-subs">—</div>
+          <div class="stat-sub">Paid plans</div>
+        </div>
+        <div class="stat-card purple">
+          <div class="stat-label">Est. Revenue</div>
+          <div class="stat-val purple" id="st-rev">—</div>
+          <div class="stat-sub">This term</div>
+        </div>
       </div>
       <div class="two-col">
         <div class="section-card">
@@ -448,10 +446,24 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);font
       </div>
     </div>
 
-    <!-- UPLOAD PANEL -->
+    <!-- ══ UPLOAD PANEL ══ -->
     <div class="panel" id="panel-upload">
+      <div style="background:linear-gradient(135deg,var(--glight),var(--alight));border:1px solid rgba(245,158,11,.3);border-radius:12px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="font-size:28px">📦</span>
+          <div>
+            <div style="font-size:14px;font-weight:700;color:var(--gold)">Upload Multiple Files at Once</div>
+            <div style="font-size:12px;color:var(--text2);margin-top:2px">Drop up to 50 PDFs or DOCXs — auto-detects grade, subject and type from filenames</div>
+          </div>
+        </div>
+        <button class="btn btn-gold" onclick="window.open('bulk-upload.html','_blank')" style="flex-shrink:0">Open Bulk Upload →</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+        <div style="flex:1;height:1px;background:var(--border)"></div>
+        <span style="font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.8px">or upload a single file below</span>
+        <div style="flex:1;height:1px;background:var(--border)"></div>
+      </div>
       <div class="two-col">
-        <!-- Left: drop zone -->
         <div>
           <div class="upload-zone" id="dropZone" ondragover="onDrag(event,true)" ondragleave="onDrag(event,false)" ondrop="onDrop(event)">
             <input type="file" id="fileInput" accept=".pdf,.docx,.doc" onchange="onFileSelect(event)">
@@ -469,21 +481,19 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);font
           </div>
           <div class="upload-progress" id="upProgress">
             <div class="up-bar-wrap"><div class="up-bar" id="upBar"></div></div>
-            <div class="up-status"><span id="upMsg">Uploading…</span><span id="upPct">0%</span></div>
+            <div class="up-status"><span id="upMsg">Uploading to R2…</span><span id="upPct">0%</span></div>
           </div>
         </div>
-
-        <!-- Right: metadata form -->
         <div class="section-card">
           <div class="section-title">📋 Resource Details</div>
           <div style="display:flex;flex-direction:column;gap:14px">
             <div class="form-row">
               <label class="form-label">Title *</label>
-              <input class="form-input" id="upTitle" placeholder="e.g. Grade 8 Math End of Term 1 Exam">
+              <input class="form-input" id="upTitle" placeholder="e.g. Grade 4 Math End of Term 1 Exam">
             </div>
             <div class="form-row">
               <label class="form-label">Description *</label>
-              <textarea class="form-textarea" id="upDesc" placeholder="Brief description of what this resource contains…"></textarea>
+              <textarea class="form-textarea" id="upDesc" placeholder="Brief description…"></textarea>
             </div>
             <div class="form-grid">
               <div class="form-row">
@@ -498,58 +508,30 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);font
                 </select>
               </div>
               <div class="form-row">
-                <label class="form-label">Grade Band *</label>
-                <select class="form-select" id="upGradeBand" onchange="onGradeBandChange()">
-                  <option value="">-- Select band --</option>
-                  <option value="primary">🟢 Primary (Grade 1–6)</option>
-                  <option value="junior">🔵 Junior Secondary (Grade 7–9)</option>
-                  <option value="senior">🟡 Senior Secondary (Form 1–5)</option>
+                <label class="form-label">Grade / Form *</label>
+                <select class="form-select" id="upGrades">
+                  <option value="">-- Select --</option>
                 </select>
               </div>
             </div>
-
-            <!-- Grade band info hint -->
-            <div id="gradeBandHint" style="display:none;font-size:11.5px;color:var(--text2);background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:8px 12px;line-height:1.5"></div>
-
             <div class="form-grid">
               <div class="form-row">
-                <label class="form-label">Specific Grade *
-                  <span class="opt">— used for filtering</span>
-                </label>
-                <select class="form-select" id="upGradeNum">
-                  <option value="">-- Pick band first --</option>
+                <label class="form-label">Subject</label>
+                <select class="form-select" id="upSubject">
+                  <option value="">-- Subject --</option>
                 </select>
               </div>
               <div class="form-row">
-                <label class="form-label">Subject <span class="opt">optional</span></label>
-                <input class="form-input" id="upSubject" placeholder="e.g. Mathematics">
-              </div>
-            </div>
-
-            <div class="form-row">
-              <label class="form-label">Subject ID <span class="opt">— for resource filtering</span></label>
-              <select class="form-select" id="upSubjectId" onchange="syncSubjectName()">
-                <option value="">-- No subject filter --</option>
-              </select>
-              <div style="font-size:10.5px;color:var(--text3);margin-top:4px;font-family:'JetBrains Mono',monospace" id="subjectIdNote">Select a grade band first to see subjects.</div>
-            </div>
-
-            <div class="form-grid">
-              <div class="form-row">
-                <label class="form-label">Pages <span class="opt">optional</span></label>
+                <label class="form-label">Pages</label>
                 <input class="form-input" type="number" id="upPages" placeholder="e.g. 8" min="1" max="500">
               </div>
-              <div class="form-row">
-                <label class="form-label">Icon (emoji) <span class="opt">optional</span></label>
-                <input class="form-input" id="upIcon" placeholder="📄" maxlength="4" style="font-size:20px;text-align:center">
-              </div>
             </div>
-
+            <div class="form-row">
+              <label class="form-label">Icon (emoji)</label>
+              <input class="form-input" id="upIcon" placeholder="📄" maxlength="4" style="font-size:20px;text-align:center;width:80px">
+            </div>
             <div class="toggle-row">
-              <div>
-                <div class="toggle-label">Free Resource</div>
-                <div class="toggle-sub">Available without subscription</div>
-              </div>
+              <div><div class="toggle-label">Free Resource</div><div class="toggle-sub">Available without subscription</div></div>
               <button class="toggle" id="freeToggle" onclick="toggleFree()"></button>
             </div>
             <button class="btn btn-primary" style="width:100%;justify-content:center;padding:11px;font-size:14px" onclick="doUpload()" id="uploadBtn">⬆️ Upload to R2</button>
@@ -558,7 +540,7 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);font
       </div>
     </div>
 
-    <!-- MANAGE PANEL -->
+    <!-- ══ MANAGE PANEL ══ -->
     <div class="panel" id="panel-manage">
       <div class="tbl-card">
         <div class="tbl-head">
@@ -566,7 +548,7 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);font
             <span class="tbl-search-icon">🔍</span>
             <input class="tbl-search" placeholder="Search resources…" oninput="filterManage()" id="manageSearch">
           </div>
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <div style="display:flex;gap:8px;align-items:center">
             <div class="chips" style="margin:0" id="manageChips">
               <button class="chip active" onclick="setManageFilter('all',this)">All</button>
               <button class="chip" onclick="setManageFilter('lesson',this)">Lessons</button>
@@ -575,40 +557,23 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);font
               <button class="chip" onclick="setManageFilter('rubric',this)">Rubrics</button>
               <button class="chip" onclick="setManageFilter('notes',this)">Notes</button>
             </div>
-            <!-- Grade band filter chips -->
-            <div class="chips" style="margin:0" id="bandChips">
-              <button class="chip active" onclick="setManageBandFilter('all',this)">All Bands</button>
-              <button class="chip" onclick="setManageBandFilter('primary',this)" style="color:var(--green)">Primary</button>
-              <button class="chip" onclick="setManageBandFilter('junior',this)" style="color:var(--accent)">Junior</button>
-              <button class="chip" onclick="setManageBandFilter('senior',this)" style="color:var(--gold)">Senior (CBE)</button>
-            </div>
-            <button class="btn btn-primary btn-sm" onclick="switchPanel('upload',document.querySelector('.nav-item:nth-child(5)'))">+ Upload</button>
           </div>
         </div>
         <div style="overflow-x:auto">
           <table class="data-table" id="manageTable">
-            <thead>
-              <tr>
-                <th style="width:32px">#</th>
-                <th>Resource</th>
-                <th>Type</th>
-                <th>Band</th>
-                <th>Grade</th>
-                <th>Format</th>
-                <th>Access</th>
-                <th>Downloads</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
+            <thead><tr>
+              <th style="width:32px">#</th><th>Resource</th><th>Type</th>
+              <th>Grade</th><th>Format</th><th>Access</th><th>Downloads</th><th>Actions</th>
+            </tr></thead>
             <tbody id="manageTbody">
-              <tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text3)"><div class="spin" style="margin:0 auto 10px"></div>Loading…</td></tr>
+              <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text3)"><div class="spin" style="margin:0 auto 10px"></div>Loading…</td></tr>
             </tbody>
           </table>
         </div>
       </div>
     </div>
 
-    <!-- SUBSCRIBERS PANEL -->
+    <!-- ══ SUBSCRIBERS PANEL ══ -->
     <div class="panel" id="panel-subscribers">
       <div class="tbl-card">
         <div class="tbl-head">
@@ -623,25 +588,27 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);font
           </div>
         </div>
         <div style="overflow-x:auto">
-          <table class="data-table">
-            <thead><tr><th>#</th><th>Name / Phone</th><th>Plan</th><th>Status</th><th>Activated</th><th>Expires</th><th>Amount</th></tr></thead>
-            <tbody id="subTbody"><tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text3)"><div class="spin" style="margin:0 auto 10px"></div>Loading…</td></tr></tbody>
+          <table class="data-table"><thead><tr>
+            <th>#</th><th>Name / Phone</th><th>Plan</th><th>Status</th><th>Activated</th><th>Expires</th><th>Amount</th>
+          </tr></thead>
+          <tbody id="subTbody"><tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text3)"><div class="spin" style="margin:0 auto 10px"></div>Loading…</td></tr></tbody>
           </table>
         </div>
       </div>
     </div>
 
-    <!-- PAYMENTS PANEL -->
+    <!-- ══ PAYMENTS PANEL ══ -->
     <div class="panel" id="panel-payments">
       <div class="tbl-card">
         <div class="tbl-head">
-          <span style="font-size:13px;font-weight:600;color:var(--text)">Payment History</span>
+          <span style="font-size:13px;font-weight:600">Payment History</span>
           <button class="btn btn-outline btn-sm" onclick="loadPayments()">🔄 Refresh</button>
         </div>
         <div style="overflow-x:auto">
-          <table class="data-table">
-            <thead><tr><th>#</th><th>Name / Phone</th><th>Plan</th><th>Amount</th><th>Status</th><th>Date</th><th>Tx Ref</th></tr></thead>
-            <tbody id="payTbody"><tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text3)"><div class="spin" style="margin:0 auto 10px"></div>Loading…</td></tr></tbody>
+          <table class="data-table"><thead><tr>
+            <th>#</th><th>Name / Phone</th><th>Plan</th><th>Amount</th><th>Status</th><th>Date</th><th>Tx Ref</th>
+          </tr></thead>
+          <tbody id="payTbody"><tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text3)"><div class="spin" style="margin:0 auto 10px"></div>Loading…</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -655,260 +622,264 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);font
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 <script>
 firebase.initializeApp({
-  apiKey:"AIzaSyDPZLbDio7OibE-FEXqFF1OdhM0qZc3yII",
-  authDomain:"divine-treat-450709-b5.firebaseapp.com",
-  projectId:"divine-treat-450709-b5",
-  storageBucket:"divine-treat-450709-b5.firebasestorage.app",
-  messagingSenderId:"866518506476",
-  appId:"1:866518506476:web:e2d3618b61f88e1f6a3ec9",
+  apiKey:            "AIzaSyDPZLbDio7OibE-FEXqFF1OdhM0qZc3yII",
+  authDomain:        "divine-treat-450709-b5.firebaseapp.com",
+  projectId:         "divine-treat-450709-b5",
+  storageBucket:     "divine-treat-450709-b5.firebasestorage.app",
+  messagingSenderId: "866518506476",
+  appId:             "1:866518506476:web:e2d3618b61f88e1f6a3ec9",
 });
-const db=firebase.firestore();
-const auth=firebase.auth();
+const db   = firebase.firestore();
+const auth = firebase.auth();
 auth.setPersistence(firebase.auth.Auth.Persistence.SESSION).catch(()=>{});
-const BACKEND='https://cbe-y1zb.onrender.com';
+const BACKEND = 'https://cbe-y1zb.onrender.com';
 
-/* ════ GRADE / SUBJECT MAPS ════ */
-const GRADE_BANDS={
-  primary:{
-    label:'Primary (CBC Lower)',color:'var(--green)',badgeClass:'badge-primary',
-    grades:[{val:1,label:'Grade 1'},{val:2,label:'Grade 2'},{val:3,label:'Grade 3'},
-            {val:4,label:'Grade 4'},{val:5,label:'Grade 5'},{val:6,label:'Grade 6'}],
-    subjects:[
-      {id:'math',label:'Mathematics'},{id:'eng',label:'English'},{id:'kisw',label:'Kiswahili'},
-      {id:'sci',label:'Science & Technology'},{id:'soc',label:'Social Studies'},
-      {id:'cre',label:'CRE'},{id:'ire',label:'IRE'},{id:'pre',label:'PRE'},
-      {id:'agri',label:'Agriculture'},{id:'hc',label:'Home Science'},
-      {id:'art',label:'Creative Arts'},{id:'music',label:'Music'},
-      {id:'pe',label:'P.H.E'},{id:'ict',label:'ICT'},
-    ]
-  },
-  junior:{
-    label:'Junior Secondary (CBC Gr 7–9)',color:'var(--accent)',badgeClass:'badge-junior',
-    grades:[{val:7,label:'Grade 7'},{val:8,label:'Grade 8'},{val:9,label:'Grade 9'}],
-    subjects:[
-      {id:'math',label:'Mathematics'},{id:'eng',label:'English'},{id:'kisw',label:'Kiswahili'},
-      {id:'sci',label:'Integrated Science'},{id:'soc',label:'Social Studies'},
-      {id:'cre',label:'CRE'},{id:'ire',label:'IRE'},{id:'pre',label:'PRE'},
-      {id:'biz',label:'Business Studies'},{id:'agri',label:'Agriculture'},
-      {id:'hc',label:'Home Science'},{id:'art',label:'Art & Craft'},
-      {id:'music',label:'Music'},{id:'pe',label:'P.H.E'},{id:'ict',label:'ICT'},
-    ]
-  },
-  senior:{
-    label:'Senior Secondary (CBE Form 1–5)',color:'var(--gold)',badgeClass:'badge-senior',
-    grades:[
-      {val:10,label:'Form 1 (Gr 10)'},{val:11,label:'Form 2 (Gr 11)'},
-      {val:12,label:'Form 3 (Gr 12)'},{val:13,label:'Form 4 (Gr 13)'},
-      {val:14,label:'Form 5 (Gr 14)'},
-    ],
-    subjects:[
-      {id:'eng',label:'English'},{id:'kisw',label:'Kiswahili'},{id:'math',label:'Mathematics'},
-      {id:'phy',label:'Physics'},{id:'chem',label:'Chemistry'},{id:'bio',label:'Biology'},
-      {id:'hist',label:'History'},{id:'geo',label:'Geography'},{id:'cre',label:'CRE'},
-      {id:'ire',label:'IRE'},{id:'biz',label:'Business Studies'},{id:'agri',label:'Agriculture'},
-      {id:'hc',label:'Home Science'},{id:'ict',label:'Computer Studies'},
-      {id:'art',label:'Art & Design'},{id:'music',label:'Music'},{id:'pe',label:'P.H.E'},
-    ]
-  }
-};
-
-function gradeLabel(num){
-  const n=parseInt(num);
-  if(n<=9)return'Grade '+n;
-  const f={10:'Form 1',11:'Form 2',12:'Form 3',13:'Form 4',14:'Form 5'};
-  return f[n]||'Grade '+n;
+/* ════════════════════════════════════════════
+   THEME TOGGLE
+════════════════════════════════════════════ */
+function toggleTheme() {
+  const h = document.documentElement;
+  h.dataset.theme = h.dataset.theme === 'dark' ? 'light' : 'dark';
+  localStorage.setItem('admin-theme', h.dataset.theme);
 }
+(function(){
+  const saved = localStorage.getItem('admin-theme');
+  if (saved) document.documentElement.dataset.theme = saved;
+})();
 
-function getBandFromGradeNum(n){
-  n=parseInt(n);
-  if(n>=1&&n<=6)return'primary';
-  if(n>=7&&n<=9)return'junior';
-  if(n>=10&&n<=14)return'senior';
-  return'junior';
-}
+/* ════════════════════════════════════════════
+   GRADE & SUBJECT DATA
+   Full range: Grade 1–6, Grade 7–9, Form 1–5 (Gr 10–14)
+════════════════════════════════════════════ */
+const GRADE_OPTIONS_HTML = `
+  <optgroup label="Lower Primary">
+    <option value="1">Grade 1</option>
+    <option value="2">Grade 2</option>
+    <option value="3">Grade 3</option>
+    <option value="4">Grade 4</option>
+    <option value="5">Grade 5</option>
+    <option value="6">Grade 6</option>
+    <option value="1-6">Grade 1–6 (All Lower)</option>
+  </optgroup>
+  <optgroup label="Junior Secondary (CBC)">
+    <option value="7">Grade 7</option>
+    <option value="8">Grade 8</option>
+    <option value="9">Grade 9</option>
+    <option value="7-9">Grade 7–9 (All CBC)</option>
+  </optgroup>
+  <optgroup label="Senior Secondary (CBE)">
+    <option value="10">Form 1 (Grade 10)</option>
+    <option value="11">Form 2 (Grade 11)</option>
+    <option value="12">Form 3 (Grade 12)</option>
+    <option value="13">Form 4 (Grade 13)</option>
+    <option value="14">Form 5 (Grade 14)</option>
+    <option value="10-14">Form 1–5 (All CBE)</option>
+  </optgroup>
+  <optgroup label="Multi-Grade">
+    <option value="1-14">All Grades (1–Form 5)</option>
+  </optgroup>`;
 
-function populateGradeNumSelect(selectId,band){
-  const sel=document.getElementById(selectId);
-  if(!sel)return;
-  sel.innerHTML='<option value="">— All in band —</option>';
-  if(!band||!GRADE_BANDS[band])return;
-  GRADE_BANDS[band].grades.forEach(g=>{
-    const o=document.createElement('option');
-    o.value=g.val; o.textContent=g.label; sel.appendChild(o);
+const SUBJECT_OPTIONS_HTML = `
+  <option value="">-- Subject --</option>
+  <optgroup label="Lower Primary & CBC (Gr 1–9)">
+    <option>Mathematics</option>
+    <option>English</option>
+    <option>Kiswahili</option>
+    <option>Integrated Science</option>
+    <option>Social Studies</option>
+    <option>Religious Education</option>
+    <option>Creative Arts &amp; Sports</option>
+    <option>Pre-Technical Studies</option>
+    <option>Agriculture &amp; Nutrition</option>
+  </optgroup>
+  <optgroup label="Senior Secondary (Form 1–5)">
+    <option>Mathematics</option>
+    <option>English</option>
+    <option>Kiswahili</option>
+    <option>Physics</option>
+    <option>Chemistry</option>
+    <option>Biology</option>
+    <option>History &amp; Government</option>
+    <option>Geography</option>
+    <option>Religious Education</option>
+    <option>Business Studies</option>
+    <option>Computer Studies</option>
+    <option>Agriculture &amp; Nutrition</option>
+    <option>Creative Arts &amp; Sports</option>
+  </optgroup>
+  <option value="All Subjects">All Subjects</option>`;
+
+// Populate all grade & subject selects on load
+function populateSelects() {
+  ['upGrades','editGrades'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = (id==='upGrades'?'<option value="">-- Select --</option>':'') + GRADE_OPTIONS_HTML;
+  });
+  ['upSubject','editSubject'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = SUBJECT_OPTIONS_HTML;
   });
 }
 
-function populateSubjectIdSelect(selectId,band){
-  const sel=document.getElementById(selectId);
-  if(!sel)return;
-  sel.innerHTML='<option value="">— No subject filter —</option>';
-  if(!band||!GRADE_BANDS[band])return;
-  GRADE_BANDS[band].subjects.forEach(s=>{
-    const o=document.createElement('option');
-    o.value=s.id; o.textContent=s.label; sel.appendChild(o);
-  });
+function gradeBadgeClass(g) {
+  const n = parseInt(g);
+  if (n >= 10 || g === '10-14') return 'badge-cbe';
+  return 'badge-type';
 }
 
-/* STATE */
-let currentUser=null,allResources=[],allSubs=[],allPayments=[];
-let manageFilter='all',manageBandFilter='all',subFilter='all';
-let selectedFile=null,editFreeVal=false,freeVal=false,deleteTarget=null;
-
-/* ════ THEME ════ */
-function toggleTheme(){
-  const h=document.documentElement;
-  h.dataset.theme=h.dataset.theme==='dark'?'light':'dark';
-  localStorage.setItem('admin-theme',h.dataset.theme);
+function gradeDisplayLabel(g) {
+  const map = {
+    '1':'Gr 1','2':'Gr 2','3':'Gr 3','4':'Gr 4','5':'Gr 5','6':'Gr 6',
+    '7':'Gr 7','8':'Gr 8','9':'Gr 9',
+    '10':'Form 1','11':'Form 2','12':'Form 3','13':'Form 4','14':'Form 5',
+    '1-6':'Gr 1–6','7-9':'Gr 7–9','10-14':'Form 1–5','1-14':'All',
+    '1-3':'Gr 1–3','4-6':'Gr 4–6','1-9':'Gr 1–9',
+  };
+  return map[g] || ('Gr '+g);
 }
-(()=>{const s=localStorage.getItem('admin-theme');if(s)document.documentElement.dataset.theme=s;})();
 
-/* CLOCK */
-setInterval(()=>{const el=document.getElementById('topbarTime');if(el)el.textContent=new Date().toLocaleTimeString('en-KE',{hour:'2-digit',minute:'2-digit'});},1000);
+/* ════════════════════════════════════════════
+   STATE
+════════════════════════════════════════════ */
+let currentUser = null;
+let allResources = [], allSubs = [], allPayments = [];
+let manageFilter = 'all', subFilter = 'all';
+let selectedFile = null;
+let editFreeVal = false, freeVal = false;
+let deleteTarget = null;
 
-/* ════ AUTH ════ */
-auth.onAuthStateChanged(async user=>{
-  if(!user){showLogin();return;}
-  try{
-    const snap=await db.collection('users').doc(user.uid).get();
-    if(!snap.exists){await auth.signOut();showLogin();return;}
-    const data=snap.data();
-    if(data.role!=='owner'&&data.role!=='admin'){
+// Clock
+setInterval(()=>{
+  const el = document.getElementById('topbarTime');
+  if(el) el.textContent = new Date().toLocaleTimeString('en-KE',{hour:'2-digit',minute:'2-digit'});
+},1000);
+
+/* ════════════════════════════════════════════
+   AUTH
+════════════════════════════════════════════ */
+auth.onAuthStateChanged(async user => {
+  if (!user){ showLogin(); return; }
+  try {
+    const snap = await db.collection('users').doc(user.uid).get();
+    if (!snap.exists){ await auth.signOut(); showLogin(); return; }
+    const data = snap.data();
+    if (data.role !== 'owner' && data.role !== 'admin'){
       await auth.signOut();
-      document.getElementById('lgErr').textContent='Owner access required';
-      document.getElementById('lgErr').style.display='block';
-      showLogin();return;
+      document.getElementById('lgErr').textContent = 'Owner access required';
+      document.getElementById('lgErr').style.display = 'block';
+      showLogin(); return;
     }
-    currentUser={...data,uid:user.uid};
-    document.getElementById('sidebarName').textContent=data.fullName||user.email;
+    currentUser = {...data, uid: user.uid};
+    document.getElementById('sidebarName').textContent = data.fullName || data.name || user.email;
     hideLogin();
+    populateSelects();
     initDashboard();
-  }catch(e){showLogin();}
+  } catch(e){ showLogin(); }
 });
 
-function showLogin(){document.getElementById('loginGate').style.display='flex';}
-function hideLogin(){document.getElementById('loginGate').style.display='none';}
+function showLogin(){ document.getElementById('loginGate').style.display='flex'; }
+function hideLogin(){ document.getElementById('loginGate').style.display='none'; }
 
 async function doLogin(){
-  const email=document.getElementById('lgEmail').value.trim();
-  const pass=document.getElementById('lgPass').value;
-  const btn=document.getElementById('lgBtn');
-  const err=document.getElementById('lgErr');
-  if(!email||!pass){err.textContent='Enter email and password';err.style.display='block';return;}
-  btn.textContent='Signing in…';btn.disabled=true;err.style.display='none';
-  try{await auth.signInWithEmailAndPassword(email,pass);}
+  const email = document.getElementById('lgEmail').value.trim();
+  const pass  = document.getElementById('lgPass').value;
+  const btn   = document.getElementById('lgBtn');
+  const err   = document.getElementById('lgErr');
+  if(!email||!pass){ err.textContent='Enter email and password'; err.style.display='block'; return; }
+  btn.textContent='Signing in…'; btn.disabled=true; err.style.display='none';
+  try { await auth.signInWithEmailAndPassword(email, pass); }
   catch(e){
-    err.textContent=e.code==='auth/wrong-password'||e.code==='auth/user-not-found'?'Invalid email or password':e.message;
-    err.style.display='block';btn.textContent='Sign In';btn.disabled=false;
+    err.textContent = (e.code==='auth/wrong-password'||e.code==='auth/user-not-found')
+      ? 'Invalid email or password' : e.message;
+    err.style.display='block';
+    btn.textContent='Sign In'; btn.disabled=false;
   }
 }
-async function doLogout(){await auth.signOut();showLogin();}
+async function doLogout(){ await auth.signOut(); showLogin(); }
 
-/* ════ NAVIGATION ════ */
-const PANEL_TITLES={dashboard:'Dashboard',upload:'Upload Resource',manage:'Manage Files',subscribers:'Subscribers',payments:'Payments'};
-function switchPanel(id,navEl){
+/* ════════════════════════════════════════════
+   NAVIGATION
+════════════════════════════════════════════ */
+const PANEL_TITLES = {
+  dashboard:'Dashboard', upload:'Upload Resource',
+  manage:'Manage Files', subscribers:'Subscribers', payments:'Payments',
+};
+function switchPanel(id, navEl){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('panel-'+id).classList.add('active');
-  if(navEl)navEl.classList.add('active');
-  document.getElementById('topbarTitle').textContent=PANEL_TITLES[id]||id;
-  if(id==='manage')loadResources();
-  if(id==='subscribers')loadSubscribers();
-  if(id==='payments')loadPayments();
+  if(navEl) navEl.classList.add('active');
+  document.getElementById('topbarTitle').textContent = PANEL_TITLES[id]||id;
+  if(id==='manage')      loadResources();
+  if(id==='subscribers') loadSubscribers();
+  if(id==='payments')    loadPayments();
 }
 
-/* ════ DASHBOARD ════ */
+/* ════════════════════════════════════════════
+   DASHBOARD
+════════════════════════════════════════════ */
 async function initDashboard(){
-  try{
-    const token=await auth.currentUser.getIdToken();
-    const res=await fetch(`${BACKEND}/api/resources/stats/summary`,{headers:{Authorization:`Bearer ${token}`}});
-    if(!res.ok)throw new Error('Stats failed');
-    const s=await res.json();
-    document.getElementById('st-total').textContent=s.totalResources||0;
-    document.getElementById('st-breakdown').textContent=`${s.freeResources||0} free · ${s.premiumResources||0} premium`;
-    document.getElementById('st-dl').textContent=s.totalDownloads||0;
-    document.getElementById('st-dl30').textContent=`Last 30 days: ${s.downloadsLast30d||0}`;
-    document.getElementById('st-subs').textContent=s.activeSubscribers||0;
-    document.getElementById('st-rev').textContent='Ksh '+(s.activeSubscribers*99).toLocaleString();
-    document.getElementById('resCountBadge').textContent=s.totalResources||0;
-    document.getElementById('subCountBadge').textContent=s.activeSubscribers||0;
-    const ranks=['gold','silver','bronze'];
-    document.getElementById('topList').innerHTML=(s.top5Downloaded||[]).map((r,i)=>`
-      <div class="top-item"><span class="top-rank ${ranks[i]||''}">${i+1}</span>
-      <div class="top-info"><div class="top-title">${r.title}</div><div class="top-type">${r.type}</div></div>
-      <span class="top-dl">${r.downloads}</span></div>`).join('')||'<div class="empty"><div class="empty-title">No downloads yet</div></div>';
-  }catch(e){
+  try {
+    const token = await auth.currentUser.getIdToken();
+    const res   = await fetch(`${BACKEND}/api/resources/stats/summary`,{headers:{Authorization:`Bearer ${token}`}});
+    if(!res.ok) throw new Error('Stats failed');
+    const s = await res.json();
+    document.getElementById('st-total').textContent     = s.totalResources||0;
+    document.getElementById('st-breakdown').textContent = `${s.freeResources} free · ${s.premiumResources} premium`;
+    document.getElementById('st-dl').textContent        = s.totalDownloads||0;
+    document.getElementById('st-dl30').textContent      = `Last 30 days: ${s.downloadsLast30d||0}`;
+    document.getElementById('st-subs').textContent      = s.activeSubscribers||0;
+    document.getElementById('st-rev').textContent       = 'Ksh '+(s.activeSubscribers*300).toLocaleString();
+    document.getElementById('resCountBadge').textContent = s.totalResources||0;
+    document.getElementById('subCountBadge').textContent = s.activeSubscribers||0;
+    const ranks = ['gold','silver','bronze'];
+    document.getElementById('topList').innerHTML = (s.top5Downloaded||[]).map((r,i)=>`
+      <div class="top-item">
+        <span class="top-rank ${ranks[i]||''}">${i+1}</span>
+        <div class="top-info"><div class="top-title">${r.title}</div><div class="top-type">${r.type}</div></div>
+        <span class="top-dl">${r.downloads}</span>
+      </div>`).join('') || '<div class="empty"><div class="empty-title">No downloads yet</div></div>';
+  } catch(e) {
     // Firestore fallback
-    const snap=await db.collection('resources').get();
-    const subSnap=await db.collection('subscriptions').where('status','==','active').get();
-    let dl=0; snap.forEach(d=>{dl+=d.data().downloads||0;});
-    document.getElementById('st-total').textContent=snap.size;
-    document.getElementById('st-subs').textContent=subSnap.size;
-    document.getElementById('st-rev').textContent='Ksh '+(subSnap.size*99).toLocaleString();
-    document.getElementById('st-dl').textContent=dl;
-    document.getElementById('resCountBadge').textContent=snap.size;
-    document.getElementById('subCountBadge').textContent=subSnap.size;
+    const snap    = await db.collection('resources').get();
+    const subSnap = await db.collection('subscribers').get();
+    document.getElementById('st-total').textContent      = snap.size;
+    document.getElementById('st-subs').textContent       = subSnap.size;
+    document.getElementById('st-rev').textContent        = 'Ksh '+(subSnap.size*99).toLocaleString();
+    document.getElementById('resCountBadge').textContent = snap.size;
+    document.getElementById('subCountBadge').textContent = subSnap.size;
+    let totalDl=0; snap.forEach(d=>{ totalDl += d.data().downloads||0; });
+    document.getElementById('st-dl').textContent = totalDl;
   }
-  // Recent uploads
-  try{
-    const rSnap=await db.collection('resources').orderBy('createdAt','desc').limit(6).get();
-    document.getElementById('recentList').innerHTML=rSnap.docs.map(d=>{
-      const r=d.data();
-      const band=getBandFromGradeNum(r.gradeNum||0);
-      const bc=GRADE_BANDS[band]?.badgeClass||'badge-type';
-      return`<div class="top-item">
+
+  // Recent uploads — always from Firestore
+  try {
+    const rSnap = await db.collection('resources').orderBy('createdAt','desc').limit(5).get();
+    document.getElementById('recentList').innerHTML = rSnap.docs.map(d=>{
+      const r = d.data();
+      return `<div class="top-item">
         <span style="font-size:18px">${r.icon||'📄'}</span>
         <div class="top-info">
           <div class="top-title">${r.title}</div>
-          <div class="top-type">${r.type} · ${gradeLabel(r.gradeNum||r.grades)}</div>
+          <div class="top-type">${r.type} · ${gradeDisplayLabel(r.grades)}</div>
         </div>
-        <span class="badge ${bc}">${band.charAt(0).toUpperCase()+band.slice(1)}</span>
+        <span class="badge ${r.free?'badge-free':'badge-premium'}">${r.free?'Free':'Premium'}</span>
       </div>`;
-    }).join('')||'<div class="empty"><div class="empty-title">No uploads yet</div></div>';
-  }catch(e){}
+    }).join('') || '<div class="empty"><div class="empty-title">No uploads yet</div></div>';
+  } catch(_){}
 }
 
-/* ════ GRADE BAND CHANGE (upload form) ════ */
-function onGradeBandChange(){
-  const band=document.getElementById('upGradeBand').value;
-  const hint=document.getElementById('gradeBandHint');
-  const note=document.getElementById('subjectIdNote');
-  populateGradeNumSelect('upGradeNum',band);
-  populateSubjectIdSelect('upSubjectId',band);
-  if(!band){hint.style.display='none';note.textContent='Select a grade band first.';return;}
-  const b=GRADE_BANDS[band];
-  const maxSubj=band==='senior'?2:(band==='junior'?3:4);
-  hint.style.display='';
-  hint.innerHTML=`<strong style="color:${b.color}">${b.label}</strong><br>
-    Subject limit for teachers in this band: <strong style="color:${b.color}">max ${maxSubj} subjects</strong>.
-    ${band==='senior'?'<br>Includes <strong>Form 1–5 (Grades 10–14)</strong>.':''}`;
-  note.textContent=`Subject IDs for ${b.label}.`;
-}
+/* ════════════════════════════════════════════
+   FILE UPLOAD
+════════════════════════════════════════════ */
+function onDrag(e,active){ e.preventDefault(); document.getElementById('dropZone').classList.toggle('drag',active); }
+function onDrop(e){ e.preventDefault(); document.getElementById('dropZone').classList.remove('drag'); const f=e.dataTransfer.files[0]; if(f) setFile(f); }
+function onFileSelect(e){ const f=e.target.files[0]; if(f) setFile(f); }
 
-function syncSubjectName(){
-  const id=document.getElementById('upSubjectId').value;
-  const band=document.getElementById('upGradeBand').value;
-  if(!id||!band)return;
-  const subj=GRADE_BANDS[band]?.subjects.find(s=>s.id===id);
-  if(subj&&!document.getElementById('upSubject').value){
-    document.getElementById('upSubject').value=subj.label;
-  }
-}
-
-/* ════ EDIT MODAL grade sync ════ */
-function syncEditGradeNum(){
-  const band=document.getElementById('editGradeBand').value;
-  populateGradeNumSelect('editGradeNum',band);
-  populateSubjectIdSelect('editSubjectId',band);
-}
-
-/* ════ FILE UPLOAD ════ */
-function onDrag(e,active){e.preventDefault();document.getElementById('dropZone').classList.toggle('drag',active);}
-function onDrop(e){e.preventDefault();document.getElementById('dropZone').classList.remove('drag');const f=e.dataTransfer.files[0];if(f)setFile(f);}
-function onFileSelect(e){const f=e.target.files[0];if(f)setFile(f);}
 function setFile(f){
   const allowed=['application/pdf','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/msword'];
-  if(!allowed.includes(f.type)){toast('Only PDF and DOCX files allowed','err');return;}
-  if(f.size>20*1024*1024){toast('File exceeds 20MB limit','err');return;}
+  if(!allowed.includes(f.type)){ toast('Only PDF and DOCX files allowed','err'); return; }
+  if(f.size>20*1024*1024){ toast('File exceeds 20MB limit','err'); return; }
   selectedFile=f;
   const ext=f.name.split('.').pop().toUpperCase();
   const size=f.size>=1024*1024?(f.size/1024/1024).toFixed(1)+'MB':Math.round(f.size/1024)+'KB';
@@ -918,135 +889,108 @@ function setFile(f){
   document.getElementById('fpSize').textContent=`${ext} · ${size}`;
   document.getElementById('filePreview').style.display='block';
   document.getElementById('dropZone').style.display='none';
-  if(!document.getElementById('upIcon').value)document.getElementById('upIcon').value=ext==='PDF'?'📄':'📝';
+  if(!document.getElementById('upIcon').value) document.getElementById('upIcon').value=ext==='PDF'?'📄':'📝';
 }
 function clearFile(){
-  selectedFile=null;document.getElementById('fileInput').value='';
+  selectedFile=null;
+  document.getElementById('fileInput').value='';
   document.getElementById('filePreview').style.display='none';
   document.getElementById('dropZone').style.display='';
 }
-function toggleFree(){freeVal=!freeVal;document.getElementById('freeToggle').classList.toggle('on',freeVal);}
+function toggleFree(){ freeVal=!freeVal; document.getElementById('freeToggle').classList.toggle('on',freeVal); }
 
 async function doUpload(){
-  if(!selectedFile){toast('Select a file first','err');return;}
-  const title=document.getElementById('upTitle').value.trim();
-  const desc=document.getElementById('upDesc').value.trim();
-  const type=document.getElementById('upType').value;
-  const band=document.getElementById('upGradeBand').value;
-  const gradeNum=document.getElementById('upGradeNum').value;
-  const subject=document.getElementById('upSubject').value;
-  const subjectId=document.getElementById('upSubjectId').value;
-  const pages=document.getElementById('upPages').value;
-  const icon=document.getElementById('upIcon').value||'📄';
-
-  if(!title){toast('Enter a title','err');return;}
-  if(!desc){toast('Enter a description','err');return;}
-  if(!type){toast('Select a type','err');return;}
-  if(!band){toast('Select a grade band','err');return;}
-  if(!gradeNum){toast('Select a specific grade','err');return;}
-
-  // Build a "grades" string for backwards compat
-  const gradesStr=band==='primary'?'1-6':band==='junior'?'7-9':'10-14';
+  if(!selectedFile){ toast('Select a file first','err'); return; }
+  const title   = document.getElementById('upTitle').value.trim();
+  const desc    = document.getElementById('upDesc').value.trim();
+  const type    = document.getElementById('upType').value;
+  const grades  = document.getElementById('upGrades').value;
+  const subject = document.getElementById('upSubject').value;
+  const pages   = document.getElementById('upPages').value;
+  const icon    = document.getElementById('upIcon').value||'📄';
+  if(!title){ toast('Enter a title','err'); return; }
+  if(!desc) { toast('Enter a description','err'); return; }
+  if(!type) { toast('Select a type','err'); return; }
+  if(!grades){ toast('Select a grade/form','err'); return; }
 
   const btn=document.getElementById('uploadBtn');
-  btn.disabled=true;btn.innerHTML='<div class="spin"></div> Uploading…';
+  btn.disabled=true; btn.innerHTML='<div class="spin"></div> Uploading…';
   const prog=document.getElementById('upProgress');
   const bar=document.getElementById('upBar');
   const msg=document.getElementById('upMsg');
   const pct=document.getElementById('upPct');
   prog.style.display='block';
   let p=0;
-  const ticker=setInterval(()=>{p=Math.min(p+Math.random()*15,90);bar.style.width=p+'%';pct.textContent=Math.round(p)+'%';},300);
+  const ticker=setInterval(()=>{ p=Math.min(p+Math.random()*15,90); bar.style.width=p+'%'; pct.textContent=Math.round(p)+'%'; },300);
 
-  try{
+  try {
     const token=await auth.currentUser.getIdToken();
     const fd=new FormData();
-    fd.append('file',selectedFile);
-    fd.append('title',title);
-    fd.append('desc',desc);
-    fd.append('type',type);
-    fd.append('grades',gradesStr);         // legacy field
-    fd.append('gradeBand',band);           // new
-    fd.append('gradeNum',gradeNum);        // NEW — specific grade number
-    fd.append('subject',subject);
-    fd.append('subjectId',subjectId);      // NEW — for front-end filtering
-    fd.append('pages',pages);
-    fd.append('icon',icon);
+    fd.append('file',selectedFile); fd.append('title',title); fd.append('desc',desc);
+    fd.append('type',type); fd.append('grades',grades); fd.append('gradeNum',parseInt(grades)||1);
+    fd.append('subject',subject); fd.append('pages',pages); fd.append('icon',icon);
     fd.append('free',freeVal?'true':'false');
-
     msg.textContent='Uploading to Cloudflare R2…';
     const res=await fetch(`${BACKEND}/api/resources/upload`,{method:'POST',headers:{Authorization:`Bearer ${token}`},body:fd});
     const data=await res.json();
-    if(!res.ok)throw new Error(data.error||'Upload failed');
-
-    clearInterval(ticker);bar.style.width='100%';pct.textContent='100%';msg.textContent='✅ Uploaded!';
-    toast(`✅ "${title}" uploaded successfully`,'ok');
+    if(!res.ok) throw new Error(data.error||'Upload failed');
+    clearInterval(ticker); bar.style.width='100%'; pct.textContent='100%';
+    msg.textContent='✅ Uploaded successfully!';
+    toast(`✅ "${title}" uploaded`,'ok');
     setTimeout(()=>{
       clearFile();
-      ['upTitle','upDesc','upPages','upIcon','upSubject'].forEach(id=>document.getElementById(id).value='');
+      ['upTitle','upDesc','upPages','upIcon'].forEach(id=>document.getElementById(id).value='');
       document.getElementById('upType').value='';
-      document.getElementById('upGradeBand').value='';
-      document.getElementById('upGradeNum').innerHTML='<option value="">-- Pick band first --</option>';
-      document.getElementById('upSubjectId').innerHTML='<option value="">-- No subject filter --</option>';
-      document.getElementById('gradeBandHint').style.display='none';
-      freeVal=false;document.getElementById('freeToggle').classList.remove('on');
-      prog.style.display='none';bar.style.width='0%';
-      btn.disabled=false;btn.innerHTML='⬆️ Upload to R2';
+      document.getElementById('upGrades').value='';
+      document.getElementById('upSubject').value='';
+      freeVal=false; document.getElementById('freeToggle').classList.remove('on');
+      prog.style.display='none'; bar.style.width='0%';
+      btn.disabled=false; btn.innerHTML='⬆️ Upload to R2';
       initDashboard();
     },1800);
-  }catch(e){
-    clearInterval(ticker);prog.style.display='none';
-    btn.disabled=false;btn.innerHTML='⬆️ Upload to R2';
+  } catch(e){
+    clearInterval(ticker); prog.style.display='none';
+    btn.disabled=false; btn.innerHTML='⬆️ Upload to R2';
     toast('Upload failed: '+e.message,'err');
   }
 }
 
-/* ════ MANAGE ════ */
+/* ════════════════════════════════════════════
+   MANAGE RESOURCES
+════════════════════════════════════════════ */
 async function loadResources(){
-  try{
+  try {
     const snap=await db.collection('resources').orderBy('createdAt','desc').get();
     allResources=snap.docs.map(d=>({id:d.id,...d.data()}));
     renderManage();
-  }catch(e){toast('Could not load resources: '+e.message,'err');}
+  } catch(e){ toast('Could not load resources: '+e.message,'err'); }
 }
 
-function setManageFilter(f,el){manageFilter=f;document.querySelectorAll('#manageChips .chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');renderManage();}
-function setManageBandFilter(f,el){manageBandFilter=f;document.querySelectorAll('#bandChips .chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');renderManage();}
-function filterManage(){renderManage();}
+function setManageFilter(f,el){
+  manageFilter=f;
+  document.querySelectorAll('#manageChips .chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active'); renderManage();
+}
+function filterManage(){ renderManage(); }
 
 function renderManage(){
   const q=(document.getElementById('manageSearch')?.value||'').toLowerCase();
-  let rows=allResources.filter(r=>{
+  const rows=allResources.filter(r=>{
     const tm=manageFilter==='all'||r.type===manageFilter;
-    const bm=manageBandFilter==='all'||(r.gradeBand===manageBandFilter)||(
-      manageBandFilter==='primary'&&parseInt(r.gradeNum||0)<=6&&parseInt(r.gradeNum||0)>=1)||
-      (manageBandFilter==='junior'&&parseInt(r.gradeNum||0)>=7&&parseInt(r.gradeNum||0)<=9)||
-      (manageBandFilter==='senior'&&parseInt(r.gradeNum||0)>=10);
     const qm=!q||r.title.toLowerCase().includes(q)||(r.subject||'').toLowerCase().includes(q);
-    return tm&&bm&&qm;
+    return tm&&qm;
   });
-
   const tbody=document.getElementById('manageTbody');
   if(!rows.length){
-    tbody.innerHTML=`<tr><td colspan="9"><div class="empty"><div class="empty-icon">📁</div><div class="empty-title">No resources found</div><div class="empty-sub">Upload your first resource using the Upload tab</div></div></td></tr>`;
+    tbody.innerHTML=`<tr><td colspan="8"><div class="empty"><div class="empty-icon">📁</div><div class="empty-title">No resources found</div><div class="empty-sub">Upload your first resource using the Upload tab</div></div></td></tr>`;
     return;
   }
-
-  tbody.innerHTML=rows.map((r,i)=>{
-    const band=r.gradeBand||getBandFromGradeNum(r.gradeNum||0);
-    const bc=GRADE_BANDS[band]?.badgeClass||'badge-type';
-    const bandLabel={primary:'Primary',junior:'Junior',senior:'Senior'}[band]||band;
-    return`<tr>
+  tbody.innerHTML=rows.map((r,i)=>`
+    <tr>
       <td style="color:var(--text3);font-family:'JetBrains Mono',monospace;font-size:11px">${i+1}</td>
-      <td>
-        <div class="res-title-cell">
-          <span class="rt">${r.icon||'📄'} ${r.title}</span>
-          <span class="rs">${r.subject||'—'} ${r.subjectId?'<code style="font-size:9px;background:var(--bg3);padding:1px 4px;border-radius:3px">'+r.subjectId+'</code>':''}</span>
-        </div>
-      </td>
+      <td><div class="res-title-cell"><span class="rt">${r.icon||'📄'} ${r.title}</span><span class="rs">${r.subject||'—'}</span></div></td>
       <td><span class="badge badge-type">${r.type}</span></td>
-      <td><span class="badge ${bc}">${bandLabel}</span></td>
-      <td style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--text2)">${r.gradeNum?gradeLabel(r.gradeNum):(r.grades||'—')}</td>
+      <td><span class="badge ${gradeBadgeClass(r.grades)}">${gradeDisplayLabel(r.grades)}</span></td>
       <td><span class="badge ${r.format==='PDF'?'badge-pdf':'badge-docx'}">${r.format||'PDF'}</span></td>
       <td><span class="badge ${r.free?'badge-free':'badge-premium'}">${r.free?'Free':'Premium'}</span></td>
       <td><span class="dl-count">${r.downloads||0}</span></td>
@@ -1054,142 +998,158 @@ function renderManage(){
         <button class="btn btn-outline btn-xs" onclick="openEdit('${r.id}')">✏️ Edit</button>
         <button class="btn btn-danger btn-xs" onclick="openDelete('${r.id}','${r.title.replace(/'/g,"\\'")}')">🗑️</button>
       </div></td>
-    </tr>`;
-  }).join('');
+    </tr>`).join('');
 }
 
-/* ════ EDIT ════ */
+/* ════════════════════════════════════════════
+   EDIT RESOURCE
+════════════════════════════════════════════ */
 function openEdit(id){
   const r=allResources.find(x=>x.id===id);
-  if(!r)return;
-  document.getElementById('editId').value=id;
-  document.getElementById('editTitle').value=r.title||'';
-  document.getElementById('editDesc').value=r.desc||'';
-  document.getElementById('editType').value=r.type||'lesson';
-  const band=r.gradeBand||getBandFromGradeNum(r.gradeNum||0);
-  document.getElementById('editGradeBand').value=band;
-  syncEditGradeNum();
-  setTimeout(()=>{
-    document.getElementById('editGradeNum').value=r.gradeNum||'';
-    document.getElementById('editSubjectId').value=r.subjectId||'';
-  },50);
-  document.getElementById('editSubject').value=r.subject||'';
+  if(!r) return;
+  document.getElementById('editId').value      = id;
+  document.getElementById('editTitle').value   = r.title||'';
+  document.getElementById('editDesc').value    = r.desc||'';
+  document.getElementById('editType').value    = r.type||'lesson';
+  document.getElementById('editGrades').value  = r.grades||'7';
+  document.getElementById('editSubject').value = r.subject||'';
   editFreeVal=!!r.free;
   document.getElementById('editFreeToggle').classList.toggle('on',editFreeVal);
   document.getElementById('editModal').classList.add('open');
 }
-function toggleEdit(){editFreeVal=!editFreeVal;document.getElementById('editFreeToggle').classList.toggle('on',editFreeVal);}
-function closeEdit(){document.getElementById('editModal').classList.remove('open');}
+function toggleEdit(){ editFreeVal=!editFreeVal; document.getElementById('editFreeToggle').classList.toggle('on',editFreeVal); }
+function closeEdit(){ document.getElementById('editModal').classList.remove('open'); }
 
 async function saveEdit(){
   const id=document.getElementById('editId').value;
   const token=await auth.currentUser.getIdToken();
-  const band=document.getElementById('editGradeBand').value;
-  const gradeNum=document.getElementById('editGradeNum').value;
-  const gradesStr=band==='primary'?'1-6':band==='junior'?'7-9':'10-14';
+  const grades=document.getElementById('editGrades').value;
   const payload={
-    title:document.getElementById('editTitle').value.trim(),
-    desc:document.getElementById('editDesc').value.trim(),
-    type:document.getElementById('editType').value,
-    grades:gradesStr,
-    gradeBand:band,
-    gradeNum:gradeNum?parseInt(gradeNum):null,
-    subject:document.getElementById('editSubject').value,
-    subjectId:document.getElementById('editSubjectId').value,
-    free:editFreeVal,
+    title:   document.getElementById('editTitle').value.trim(),
+    desc:    document.getElementById('editDesc').value.trim(),
+    type:    document.getElementById('editType').value,
+    grades,
+    gradeNum: parseInt(grades)||1,
+    subject: document.getElementById('editSubject').value,
+    free:    editFreeVal,
   };
-  if(!payload.title){toast('Title required','err');return;}
+  if(!payload.title){ toast('Title required','err'); return; }
   const btn=document.getElementById('editSaveBtn');
-  btn.disabled=true;btn.textContent='Saving…';
-  try{
+  btn.disabled=true; btn.textContent='Saving…';
+  try {
     const res=await fetch(`${BACKEND}/api/resources/${id}`,{method:'PATCH',headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`},body:JSON.stringify(payload)});
-    if(!res.ok)throw new Error((await res.json()).error||'Update failed');
+    if(!res.ok) throw new Error((await res.json()).error||'Update failed');
     const idx=allResources.findIndex(x=>x.id===id);
-    if(idx>=0)allResources[idx]={...allResources[idx],...payload};
-    renderManage();closeEdit();toast('Resource updated','ok');
-  }catch(e){toast('Save failed: '+e.message,'err');}
-  btn.disabled=false;btn.textContent='Save Changes';
+    if(idx>=0) allResources[idx]={...allResources[idx],...payload};
+    renderManage(); closeEdit(); toast('Resource updated','ok');
+  } catch(e){ toast('Save failed: '+e.message,'err'); }
+  btn.disabled=false; btn.textContent='Save Changes';
 }
 
-/* ════ DELETE ════ */
-function openDelete(id,title){deleteTarget=id;document.getElementById('delName').textContent=title;document.getElementById('delModal').classList.add('open');}
-function closeDelete(){document.getElementById('delModal').classList.remove('open');deleteTarget=null;}
+/* ════════════════════════════════════════════
+   DELETE RESOURCE
+════════════════════════════════════════════ */
+function openDelete(id,title){ deleteTarget=id; document.getElementById('delName').textContent=title; document.getElementById('delModal').classList.add('open'); }
+function closeDelete(){ document.getElementById('delModal').classList.remove('open'); deleteTarget=null; }
+
 async function confirmDelete(){
-  if(!deleteTarget)return;
+  if(!deleteTarget) return;
   const btn=document.getElementById('delBtn');
   const token=await auth.currentUser.getIdToken();
-  btn.disabled=true;btn.textContent='Deleting…';
-  try{
+  btn.disabled=true; btn.textContent='Deleting…';
+  try {
     const res=await fetch(`${BACKEND}/api/resources/${deleteTarget}`,{method:'DELETE',headers:{Authorization:`Bearer ${token}`}});
-    if(!res.ok)throw new Error((await res.json()).error||'Delete failed');
+    if(!res.ok) throw new Error((await res.json()).error||'Delete failed');
     allResources=allResources.filter(r=>r.id!==deleteTarget);
-    renderManage();closeDelete();toast('Resource deleted','ok');initDashboard();
-  }catch(e){toast('Delete failed: '+e.message,'err');}
-  btn.disabled=false;btn.textContent='Delete Forever';
+    renderManage(); closeDelete(); toast('Resource deleted','ok'); initDashboard();
+  } catch(e){ toast('Delete failed: '+e.message,'err'); }
+  btn.disabled=false; btn.textContent='Delete Forever';
 }
 
-/* ════ SUBSCRIBERS ════ */
+/* ════════════════════════════════════════════
+   SUBSCRIBERS
+════════════════════════════════════════════ */
 async function loadSubscribers(){
-  try{
-    const snap=await db.collection('subscriptions').orderBy('activatedAt','desc').get();
-    allSubs=snap.docs.map(d=>({id:d.id,...d.data()}));renderSubs();
-  }catch(e){toast('Could not load subscribers: '+e.message,'err');}
+  try {
+    const snap=await db.collection('subscribers').get();
+    allSubs=snap.docs.map(d=>({id:d.id,...d.data()}));
+    renderSubs();
+  } catch(e){ toast('Could not load subscribers: '+e.message,'err'); }
 }
-function setSubFilter(f,el){subFilter=f;document.querySelectorAll('#panel-subscribers .chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');renderSubs();}
-function filterSubs(){renderSubs();}
+function setSubFilter(f,el){ subFilter=f; document.querySelectorAll('#panel-subscribers .chip').forEach(c=>c.classList.remove('active')); el.classList.add('active'); renderSubs(); }
+function filterSubs(){ renderSubs(); }
+
 function renderSubs(){
   const q=(document.getElementById('subSearch')?.value||'').toLowerCase();
+  const now=new Date();
   const rows=allSubs.filter(s=>{
-    const sm=subFilter==='all'||s.status===subFilter;
-    const qm=!q||(s.name||'').toLowerCase().includes(q)||(s.phone||'').includes(q);
+    const isActive = s.expiresAt ? new Date(s.expiresAt) > now : !!s.unlockedAt;
+    const status   = isActive ? 'active' : 'expired';
+    const sm=subFilter==='all'||subFilter===status;
+    const qm=!q||(s.phone||'').includes(q)||(s.uid||'').includes(q);
     return sm&&qm;
   });
-  const fmt=ts=>{if(!ts)return'—';const d=ts.toDate?ts.toDate():new Date(ts);return d.toLocaleDateString('en-KE',{day:'numeric',month:'short',year:'numeric'});};
+  const fmt=ts=>{if(!ts) return '—';const d=ts.toDate?ts.toDate():new Date(ts);return d.toLocaleDateString('en-KE',{day:'numeric',month:'short',year:'numeric'});};
   const tbody=document.getElementById('subTbody');
-  if(!rows.length){tbody.innerHTML=`<tr><td colspan="7"><div class="empty"><div class="empty-icon">👥</div><div class="empty-title">No subscribers yet</div></div></td></tr>`;return;}
-  tbody.innerHTML=rows.map((s,i)=>`<tr>
-    <td style="color:var(--text3);font-family:'JetBrains Mono',monospace;font-size:11px">${i+1}</td>
-    <td><div style="font-weight:600;font-size:13px">${s.name||'—'}</div><div style="font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace">${s.phone||'—'}</div></td>
-    <td><span class="badge badge-type">${s.planName||s.plan||'—'}</span></td>
-    <td><span class="sub-status-${s.status||'pending'}">${(s.status||'pending').toUpperCase()}</span></td>
-    <td class="exp-date">${fmt(s.activatedAt)}</td>
-    <td class="exp-date">${fmt(s.expiresAt)}</td>
-    <td style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--gold)">Ksh ${s.amount||0}</td>
-  </tr>`).join('');
+  if(!rows.length){
+    tbody.innerHTML=`<tr><td colspan="7"><div class="empty"><div class="empty-icon">👥</div><div class="empty-title">No subscribers yet</div></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML=rows.map((s,i)=>{
+    const isActive=s.expiresAt?new Date(s.expiresAt)>now:!!s.unlockedAt;
+    return `<tr>
+      <td style="color:var(--text3);font-family:'JetBrains Mono',monospace;font-size:11px">${i+1}</td>
+      <td><div style="font-weight:600;font-size:13px">${s.uid||'—'}</div><div style="font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace">${s.phone||'—'}</div></td>
+      <td><span class="badge badge-type">${s.planKey||s.plan||'—'}</span></td>
+      <td><span class="sub-status-${isActive?'active':'expired'}">${isActive?'ACTIVE':'EXPIRED'}</span></td>
+      <td class="exp-date">${fmt(s.unlockedAt)}</td>
+      <td class="exp-date">${fmt(s.expiresAt)}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--gold)">Ksh ${s.amount||0}</td>
+    </tr>`;
+  }).join('');
 }
 
-/* ════ PAYMENTS ════ */
+/* ════════════════════════════════════════════
+   PAYMENTS
+════════════════════════════════════════════ */
 async function loadPayments(){
-  try{
+  try {
     const snap=await db.collection('subscriptionPayments').orderBy('createdAt','desc').limit(100).get();
-    allPayments=snap.docs.map(d=>({id:d.id,...d.data()}));renderPayments();
-  }catch(e){toast('Could not load payments: '+e.message,'err');}
+    allPayments=snap.docs.map(d=>({id:d.id,...d.data()}));
+    renderPayments();
+  } catch(e){ toast('Could not load payments: '+e.message,'err'); }
 }
 function renderPayments(){
-  const STATUS_COLORS={confirmed:'var(--green)',pending:'var(--gold)',underpaid:'var(--red)',expired:'var(--text3)'};
-  const fmt=ts=>{if(!ts)return'—';const d=ts.toDate?ts.toDate():new Date(ts);return d.toLocaleDateString('en-KE',{day:'numeric',month:'short',year:'numeric'});};
+  const fmt=ts=>{if(!ts) return '—';const d=ts.toDate?ts.toDate():new Date(ts);return d.toLocaleDateString('en-KE',{day:'numeric',month:'short',year:'numeric'});};
+  const STATUS_COLORS={completed:'var(--green)',confirmed:'var(--green)',pending:'var(--gold)',failed:'var(--red)',cancelled:'var(--red)'};
   const tbody=document.getElementById('payTbody');
   if(!allPayments.length){tbody.innerHTML=`<tr><td colspan="7"><div class="empty"><div class="empty-icon">💳</div><div class="empty-title">No payments yet</div></div></td></tr>`;return;}
-  tbody.innerHTML=allPayments.map((p,i)=>`<tr>
-    <td style="color:var(--text3);font-family:'JetBrains Mono',monospace;font-size:11px">${i+1}</td>
-    <td><div style="font-weight:600;font-size:13px">${p.name||'—'}</div><div style="font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace">${p.phone||'—'}</div></td>
-    <td><span class="badge badge-type">${p.planName||p.planKey||'—'}</span></td>
-    <td style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--gold)">Ksh ${p.paidAmount||p.amount||0}</td>
-    <td style="font-weight:700;font-size:12px;color:${STATUS_COLORS[p.status]||'var(--text2)'}">${(p.status||'pending').toUpperCase()}</td>
-    <td style="font-size:11.5px;color:var(--text2)">${fmt(p.createdAt)}</td>
-    <td style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text3);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.txRef||'—'}</td>
-  </tr>`).join('');
+  tbody.innerHTML=allPayments.map((p,i)=>`
+    <tr>
+      <td style="color:var(--text3);font-family:'JetBrains Mono',monospace;font-size:11px">${i+1}</td>
+      <td><div style="font-weight:600;font-size:13px">${p.name||'—'}</div><div style="font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace">${p.phone||'—'}</div></td>
+      <td><span class="badge badge-type">${p.planLabel||p.planKey||'—'}</span></td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--gold)">Ksh ${p.amount||0}</td>
+      <td style="font-weight:700;font-size:12px;color:${STATUS_COLORS[p.status]||'var(--text2)'}">
+        ${(p.status||'pending').toUpperCase()}
+      </td>
+      <td style="font-size:11.5px;color:var(--text2)">${fmt(p.createdAt)}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text3);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.txRef||'—'}</td>
+    </tr>`).join('');
 }
 
-/* Close modals on overlay click */
+/* ════════════════════════════════════════════
+   UTILS
+════════════════════════════════════════════ */
 ['editModal','delModal'].forEach(id=>{
   document.getElementById(id).addEventListener('click',function(e){
-    if(e.target===this){if(id==='editModal')closeEdit();else closeDelete();}
+    if(e.target===this){ id==='editModal'?closeEdit():closeDelete(); }
   });
 });
 
 function toast(msg,type='ok'){
-  const t=document.createElement('div');t.className=`t ${type}`;
+  const t=document.createElement('div');
+  t.className=`t ${type}`;
   t.innerHTML=`<span>${{ok:'✅',err:'❌',info:'ℹ️'}[type]||'ℹ️'}</span><span>${msg}</span>`;
   document.getElementById('tc').appendChild(t);
   setTimeout(()=>{t.style.animation='tout .25s ease forwards';setTimeout(()=>t.remove(),280);},2800);
