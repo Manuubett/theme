@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Page Unavailable</title>
+
+<!-- Font Awesome for WhatsApp icon -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+        overflow: hidden;
+    }
+
+    .container {
+        background: #fff;
+        padding: 40px;
+        border-radius: 12px;
+        text-align: center;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+        animation: fadeIn 1.2s ease-in-out;
+    }
+
+    h1 {
+        color: #e74c3c;
+        animation: slideDown 1s ease;
+    }
+
+    p {
+        margin: 15px 0;
+        font-size: 16px;
+        color: #555;
+        animation: fadeIn 2s ease;
+    }
+
+    .whatsapp-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        background-color: #25D366;
+        color: white;
+        padding: 14px 24px;
+        border-radius: 30px;
+        text-decoration: none;
+        font-size: 16px;
+        margin-top: 20px;
+        transition: 0.3s;
+        animation: popUp 1.5s ease;
+    }
+
+    .whatsapp-btn i {
+        font-size: 20px;
+    }
+
+    .whatsapp-btn:hover {
+        background-color: #1ebe5d;
+        transform: scale(1.05);
+    }
+
+    /* Animations */
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes slideDown {
+        from { transform: translateY(-30px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+
+    @keyframes popUp {
+        from { transform: scale(0.8); opacity: 0; }
+        to { transform: scale(1); opacity: 1; }
+    }
+
+    /* floating background circles */
+    .circle {
+        position: absolute;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.1);
+        animation: float 10s infinite ease-in-out;
+    }
+
+    .circle:nth-child(1) {
+        width: 100px;
+        height: 100px;
+        top: 10%;
+        left: 20%;
+    }
+
+    .circle:nth-child(2) {
+        width: 150px;
+        height: 150px;
+        bottom: 15%;
+        right: 20%;
+        animation-duration: 12s;
+    }
+
+    .circle:nth-child(3) {
+        width: 70px;
+        height: 70px;
+        bottom: 30%;
+        left: 10%;
+        animation-duration: 8s;
+    }
+
+    @keyframes float {
+        0% { transform: translateY(0px); }
+        50% { transform: translateY(-30px); }
+        100% { transform: translateY(0px); }
+    }
+</style>
+</head>
+<body>
+
+<div class="circle"></div>
+<div class="circle"></div>
+<div class="circle"></div>
+
+<div class="container">
+    <h1>Page Not Available</h1>
+    <p>This page is no longer available.</p>
+    <p>Please contact us for assistance.</p>
+
+    <!-- WhatsApp button only -->
+    <a class="whatsapp-btn" href="https://wa.me/254704518130" target="_blank">
+        <i class="fab fa-whatsapp"></i> Contact on WhatsApp
+    </a>
+</div>
+
+</body>
+</html>
