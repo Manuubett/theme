@@ -30,7 +30,7 @@ if (!MERCHANT_CODE) console.warn('⚠️  [Subscriptions] PAYNECTA_CODE not set'
 
 // ── Plan definitions — must match frontend PLANS object keys ─────────────────
 const PLAN_CONFIG = {
-  resource_termly: { label: 'Termly Access',  amount: 99,   daysValid: 120 },
+  resource_termly: { label: 'Termly Access',  amount: 1,   daysValid: 120 },
   resource_annual: { label: 'Annual Access',  amount: 270,  daysValid: 365 },
   resource_school: { label: 'School License', amount: 2500, daysValid: 120 },
 };
