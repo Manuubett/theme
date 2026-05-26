@@ -223,7 +223,8 @@ router.post('/webhook', async (req, res) => {
     const mpesaCode = data.MpesaReceiptNumber || data.mpesa_receipt || null;
     const mobile    = data.customer?.mobile_number || data.phone || null;
 
-    console.log('[Webhook]', { eventType, txRef, rawStatus, mpesaCode });
+  console.log('[Webhook] RAW:', JSON.stringify(payload, null, 2));
+console.log('[Webhook] PARSED:', { eventType, txRef, rawStatus, mpesaCode });
 
     if (!txRef) return;
 
