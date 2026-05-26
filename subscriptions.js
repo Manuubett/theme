@@ -205,13 +205,15 @@ router.post('/webhook', async (req, res) => {
   res.json({ received: true }); // fast 200 first
 
   try {
-    // Body arrives as raw Buffer when express.raw() is active
     let payload;
     if (Buffer.isBuffer(req.body)) {
       payload = JSON.parse(req.body.toString('utf8'));
     } else {
       payload = req.body;
     }
+
+    // TEMPORARY DEBUG — remove after you identify the field names
+    console.log('[Webhook] RAW PAYLOAD:', JSON.stringify(payload, null, 2));
 
     const data      = payload.data || {};
     const tx        = data.transaction || {};
