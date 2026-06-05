@@ -52,16 +52,6 @@ const upload = multer({
 
 // ════════════════════════════════════════════
 // WATERMARK UTILITY
-//
-// Stamps every page of a PDF Buffer with:
-//   1. Diagonal semi-transparent brand text (centre of page, tiled)
-//   2. Bottom footer bar: brand name | licence info | website
-//
-// @param {Buffer}  pdfBuffer
-// @param {object}  opts
-//   licenseeName  {string}  e.g. "Jane Wanjiku"
-//   licenseeId    {string}  e.g. "0712 345 678"
-// @returns {Buffer} stamped PDF
 // ════════════════════════════════════════════
 async function stampWatermark(pdfBuffer, { licenseeName = '', licenseeId = '' } = {}) {
   const pdfDoc  = await PDFDocument.load(pdfBuffer, { ignoreEncryption: true });
@@ -69,12 +59,11 @@ async function stampWatermark(pdfBuffer, { licenseeName = '', licenseeId = '' } 
   const regular = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const pages   = pdfDoc.getPages();
 
-  // ── Colour palette ──
-  const brandBlue  = rgb(0.23, 0.51, 0.96);  // #3b82f6
-  const brandGold  = rgb(0.96, 0.62, 0.04);  // #f59e0b
-  const navyBg     = rgb(0.06, 0.09, 0.20);  // dark footer
+  const brandBlue  = rgb(0.23, 0.51, 0.96);
+  const brandGold  = rgb(0.96, 0.62, 0.04);
+  const navyBg     = rgb(0.06, 0.09, 0.20);
   const white      = rgb(1,    1,    1);
-  const diagColour = rgb(0.23, 0.51, 0.96);  // same blue, low opacity
+  const diagColour = rgb(0.23, 0.51, 0.96);
 
   const BRAND   = 'Smart Resource Hub';
   const WEBSITE = 'bett.website';
@@ -82,7 +71,6 @@ async function stampWatermark(pdfBuffer, { licenseeName = '', licenseeId = '' } 
     day: 'numeric', month: 'short', year: 'numeric',
   });
 
-  // Build personalised licence string
   const licText = licenseeName
     ? `Licensed to: ${licenseeName}${licenseeId ? '  ·  ' + licenseeId : ''}  ·  ${now}`
     : `Downloaded: ${now}  ·  ${WEBSITE}`;
@@ -92,105 +80,53 @@ async function stampWatermark(pdfBuffer, { licenseeName = '', licenseeId = '' } 
     const cx = width  / 2;
     const cy = height / 2;
 
-    // ────────────────────────────────────────
     // 1. DIAGONAL WATERMARK
-    // ────────────────────────────────────────
     const diagSize = Math.max(18, Math.min(width, height) * 0.065);
     const diagW    = bold.widthOfTextAtSize(BRAND, diagSize);
 
-    // Centre — main stamp
     page.drawText(BRAND, {
-      x:       cx - diagW / 2,
-      y:       cy,
-      size:    diagSize,
-      font:    bold,
-      color:   diagColour,
-      opacity: 0.10,
-      rotate:  degrees(45),
+      x: cx - diagW / 2, y: cy,
+      size: diagSize, font: bold, color: diagColour, opacity: 0.10, rotate: degrees(45),
+    });
+    page.drawText(BRAND, {
+      x: cx - diagW / 2 - width * 0.30, y: cy + height * 0.28,
+      size: diagSize * 0.80, font: bold, color: diagColour, opacity: 0.07, rotate: degrees(45),
+    });
+    page.drawText(BRAND, {
+      x: cx - diagW / 2 + width * 0.28, y: cy - height * 0.26,
+      size: diagSize * 0.80, font: bold, color: diagColour, opacity: 0.07, rotate: degrees(45),
     });
 
-    // Upper-left tile
-    page.drawText(BRAND, {
-      x:       cx - diagW / 2 - width  * 0.30,
-      y:       cy + height * 0.28,
-      size:    diagSize * 0.80,
-      font:    bold,
-      color:   diagColour,
-      opacity: 0.07,
-      rotate:  degrees(45),
-    });
-
-    // Lower-right tile
-    page.drawText(BRAND, {
-      x:       cx - diagW / 2 + width  * 0.28,
-      y:       cy - height * 0.26,
-      size:    diagSize * 0.80,
-      font:    bold,
-      color:   diagColour,
-      opacity: 0.07,
-      rotate:  degrees(45),
-    });
-
-    // ────────────────────────────────────────
     // 2. FOOTER STRIP
-    // ────────────────────────────────────────
-    const FH  = 28;   // footer height in pts
-    const PAD = 10;   // horizontal padding
+    const FH  = 28;
+    const PAD = 10;
 
-    // Dark navy bar
-    page.drawRectangle({
-      x: 0, y: 0,
-      width, height: FH,
-      color:   navyBg,
-      opacity: 0.93,
-    });
-
-    // Gold left accent
-    page.drawRectangle({
-      x: 0, y: 0,
-      width: 3, height: FH,
-      color:   brandGold,
-      opacity: 1,
-    });
+    page.drawRectangle({ x: 0, y: 0, width, height: FH, color: navyBg, opacity: 0.93 });
+    page.drawRectangle({ x: 0, y: 0, width: 3, height: FH, color: brandGold, opacity: 1 });
 
     const bSize = 9;
     const bW    = bold.widthOfTextAtSize(BRAND, bSize);
     const midY  = FH / 2 - bSize / 2 + 0.5;
 
-    // Brand name — left, bold blue
     page.drawText(BRAND, {
-      x: PAD + 6, y: midY,
-      size: bSize, font: bold,
-      color: brandBlue, opacity: 1,
+      x: PAD + 6, y: midY, size: bSize, font: bold, color: brandBlue, opacity: 1,
     });
-
-    // Separator
     page.drawText('|', {
-      x: PAD + 6 + bW + 7, y: midY + 0.5,
-      size: bSize, font: regular,
-      color: white, opacity: 0.25,
+      x: PAD + 6 + bW + 7, y: midY + 0.5, size: bSize, font: regular, color: white, opacity: 0.25,
     });
 
-    // Licence text — centre
     const lSize = 7.5;
     const lW    = regular.widthOfTextAtSize(licText, lSize);
-    const lX    = Math.min(
-      PAD + 6 + bW + 20,
-      width / 2 - lW / 2,
-    );
+    const lX    = Math.min(PAD + 6 + bW + 20, width / 2 - lW / 2);
     page.drawText(licText, {
-      x: lX, y: FH / 2 - lSize / 2 + 0.5,
-      size: lSize, font: regular,
-      color: white, opacity: 0.80,
+      x: lX, y: FH / 2 - lSize / 2 + 0.5, size: lSize, font: regular, color: white, opacity: 0.80,
     });
 
-    // Website — right, gold
     const wSize = 7.5;
     const wW    = regular.widthOfTextAtSize(WEBSITE, wSize);
     page.drawText(WEBSITE, {
       x: width - PAD - wW, y: FH / 2 - wSize / 2 + 0.5,
-      size: wSize, font: regular,
-      color: brandGold, opacity: 0.90,
+      size: wSize, font: regular, color: brandGold, opacity: 0.90,
     });
   }
 
@@ -233,7 +169,7 @@ async function requireAuth(req, res, next) {
   }
   try {
     const decoded = await admin.auth().verifyIdToken(auth.split('Bearer ')[1]);
-    req.uid     = decoded.uid;
+    req.uid      = decoded.uid;
     req.schoolId = decoded.schoolId || null;
     next();
   } catch {
@@ -258,19 +194,50 @@ async function requireAdmin(req, res, next) {
 
 // ════════════════════════════════════════════
 // SUBSCRIPTION CHECK
+// Reads from 'subscribers' — matches what the webhook writes
+// Falls back to legacy 'subscriptions' collection for old records
 // ════════════════════════════════════════════
 async function checkSubscription(uid) {
   try {
-    const snap = await db.collection('subscriptions').doc(uid).get();
-    if (!snap.exists) return { active: false };
-    const sub  = snap.data();
-    if (sub.status !== 'active') return { active: false, reason: sub.status };
-    const expires = sub.expiresAt?.toDate?.() || new Date(sub.expiresAt);
-    if (expires < new Date()) {
-      await db.collection('subscriptions').doc(uid).update({ status: 'expired' });
-      return { active: false, reason: 'expired' };
+    // PRIMARY: 'subscribers' collection (written by webhook)
+    const snap = await db.collection('subscribers').doc(uid).get();
+
+    if (snap.exists) {
+      const sub     = snap.data();
+      // Handle both ISO string and Firestore Timestamp
+      const expRaw  = sub.expiresAt;
+      const expDate = expRaw?.toDate ? expRaw.toDate()
+                    : expRaw         ? new Date(expRaw)
+                    : null;
+      const active  = expDate ? expDate > new Date() : !!sub.unlockedAt;
+
+      if (!active && expDate) {
+        // Lazy-expire without blocking the response
+        db.collection('subscribers').doc(uid)
+          .update({ status: 'expired' })
+          .catch(() => {});
+      }
+
+      return { active, plan: sub.planKey || 'resource_termly', expiresAt: expDate || null };
     }
-    return { active: true, plan: sub.plan, expiresAt: expires };
+
+    // FALLBACK: legacy 'subscriptions' collection
+    const legacySnap = await db.collection('subscriptions').doc(uid).get();
+    if (legacySnap.exists) {
+      const sub     = legacySnap.data();
+      if (sub.status !== 'active') return { active: false, reason: sub.status };
+      const expires = sub.expiresAt?.toDate?.() || new Date(sub.expiresAt);
+      const active  = expires > new Date();
+      if (!active) {
+        db.collection('subscriptions').doc(uid)
+          .update({ status: 'expired' })
+          .catch(() => {});
+      }
+      return { active, plan: sub.plan, expiresAt: expires };
+    }
+
+    return { active: false, reason: 'not_found' };
+
   } catch (e) {
     console.error('[checkSubscription]', e.message);
     return { active: false, reason: 'error' };
@@ -293,7 +260,6 @@ router.get('/', async (req, res) => {
         grades: d.grades, free: d.free, pages: d.pages, size: d.size,
         format: d.format, icon: d.icon, subject: d.subject || '',
         downloads: d.downloads || 0, createdAt: d.createdAt,
-        // storagePath never sent to client
       });
     });
     if (grade && grade !== 'all') resources = resources.filter(r => r.grades === grade || r.grades === '1-9');
@@ -316,8 +282,6 @@ router.get('/', async (req, res) => {
 // ════════════════════════════════════════════
 // POST /api/resources/download-free
 // FREE resources — NO auth required
-// Fetches from R2 → stamps watermark → streams PDF
-// Security: resource.free === true is the hard gate
 // ════════════════════════════════════════════
 router.post('/download-free', async (req, res) => {
   const { resourceId, downloaderName = '', downloaderPhone = '' } = req.body;
@@ -341,7 +305,6 @@ router.post('/download-free', async (req, res) => {
       licenseeId:   downloaderPhone || '',
     });
 
-    // Async side effects
     db.collection('resources').doc(resourceId)
       .update({ downloads: admin.firestore.FieldValue.increment(1) })
       .catch(() => {});
@@ -363,7 +326,6 @@ router.post('/download-free', async (req, res) => {
 // ════════════════════════════════════════════
 // POST /api/resources/download
 // PREMIUM resources — auth + subscription required
-// Fetches from R2 → stamps personalised watermark → streams PDF
 // ════════════════════════════════════════════
 router.post('/download', requireAuth, async (req, res) => {
   const { resourceId } = req.body;
@@ -405,7 +367,6 @@ router.post('/download', requireAuth, async (req, res) => {
     const rawBuffer = await fetchFromR2(resource.storagePath);
     const stamped   = await stampWatermark(rawBuffer, { licenseeName, licenseeId });
 
-    // Async side effects
     db.collection('resources').doc(resourceId)
       .update({ downloads: admin.firestore.FieldValue.increment(1) })
       .catch(() => {});
@@ -506,7 +467,7 @@ router.get('/stats/summary', requireAuth, requireAdmin, async (req, res) => {
       db.collection('resources').get(),
       db.collection('downloadLogs')
         .where('downloadedAt', '>=', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)).get(),
-      db.collection('subscriptions').where('status', '==', 'active').get(),
+      db.collection('subscribers').where('status', '!=', 'expired').get(),
     ]);
     let totalDownloads = 0, freeCount = 0, premiumCount = 0;
     const all = [];
