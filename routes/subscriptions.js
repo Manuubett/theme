@@ -28,7 +28,7 @@ if (!MERCHANT_CODE) console.warn('⚠️  [Subscriptions] PAYNECTA_CODE not set'
 
 // ── Plan definitions ─────────────────────────────────────────────────────────
 const PLAN_CONFIG = {
-  resource_termly: { label: 'Termly Access',  amount: 1,   daysValid: 120 },
+  resource_termly: { label: 'Termly Access',  amount: 1,    daysValid: 120 },
   resource_annual: { label: 'Annual Access',  amount: 270,  daysValid: 365 },
   resource_school: { label: 'School License', amount: 2500, daysValid: 120 },
 };
@@ -56,6 +56,13 @@ function calcExpiry(daysValid) {
   const d = new Date();
   d.setDate(d.getDate() + (daysValid || 120));
   return d.toISOString();
+}
+
+/** Extract a value from M-Pesa CallbackMetadata Item array */
+function extractCallbackItem(items, name) {
+  if (!Array.isArray(items)) return null;
+  const item = items.find(i => i.Name === name);
+  return item?.Value ?? null;
 }
 
 
@@ -88,16 +95,23 @@ router.post('/initiate', async (req, res) => {
       callback_url:  `${SERVER_BASE}/api/subscriptions/webhook`,
     };
 
+    console.log('[Initiate] Paynecta payload:', JSON.stringify(paynectaPayload));
+
     const response = await axios.post(
       `${PAYNECTA_URL}/payment/initialize`,
       paynectaPayload,
       { headers: paynectaHeaders(), timeout: 15000 }
     );
 
+    console.log('[Initiate] Paynecta response:', JSON.stringify(response.data));
+
     const txRef =
       response.data?.data?.transaction_reference ||
       response.data?.data?.CheckoutRequestID     ||
+      response.data?.data?.txRef                 ||
+      response.data?.data?.id                    ||
       response.data?.transaction_reference       ||
+      response.data?.txRef                       ||
       `CBE-${Date.now()}`;
 
     // Save pending payment keyed by txRef
@@ -163,7 +177,6 @@ router.get('/status', async (req, res) => {
       }
 
       // ── 2. Fallback: find payment record → phone → subscribersByPhone ────────
-      // Solves anonymous UID mismatch when user refreshes the page after paying
       try {
         const paySnap = await db.collection('subscriptionPayments')
           .where('uid', '==', uid)
@@ -182,8 +195,6 @@ router.get('/status', async (req, res) => {
               const expiresAt = sub.expiresAt ? new Date(sub.expiresAt) : null;
               const active    = expiresAt ? expiresAt > new Date() : !!sub.unlockedAt;
 
-              // Auto-repair: write subscriber doc under current uid so future
-              // lookups by uid succeed without needing this fallback again
               if (active) {
                 db.collection('subscribers').doc(uid)
                   .set(
@@ -202,11 +213,32 @@ router.get('/status', async (req, res) => {
               });
             }
           }
+
+          // ── 2b. NEW: completed payment record is enough to grant access ──────
+          // Handles case where webhook wrote subscriptionPayments but missed
+          // writing to subscribers (txRef mismatch or partial failure)
+          if (pay.status === 'completed' || pay.status === 'confirmed') {
+            const plan      = PLAN_CONFIG[pay.planKey] || PLAN_CONFIG['resource_termly'];
+            const expiresAt = pay.expiresAt || calcExpiry(plan.daysValid);
+            // Repair: write subscriber doc so future lookups skip this fallback
+            db.collection('subscribers').doc(uid).set({
+              uid,
+              phone:      pay.phone || '',
+              planKey:    pay.planKey || 'resource_termly',
+              planLabel:  plan.label,
+              txRef:      pay.txRef,
+              expiresAt,
+              unlockedAt: admin.firestore.FieldValue.serverTimestamp(),
+              repairedFromPayment: true,
+            }, { merge: true }).catch(() => {});
+            console.log(`[Status] ✅ Repaired from completed payment uid=${uid}`);
+            return res.json({ success: true, active: true, expiresAt, plan: pay.planKey, uid });
+          }
         }
       } catch (_) {} // non-fatal — fall through
     }
 
-    // ── 3. Direct phone lookup (phoneParam sent by frontend during polling) ───
+    // ── 3. Direct phone lookup ────────────────────────────────────────────────
     if (phoneParam) {
       const phone   = normalisePhone(phoneParam);
       const byPhone = await db.collection('subscribersByPhone').doc(phone).get();
@@ -214,6 +246,12 @@ router.get('/status', async (req, res) => {
         const sub       = byPhone.data();
         const expiresAt = sub.expiresAt ? new Date(sub.expiresAt) : null;
         const active    = expiresAt ? expiresAt > new Date() : !!sub.unlockedAt;
+        if (active && uid) {
+          // Repair uid→subscriber link
+          db.collection('subscribers').doc(uid)
+            .set({ ...sub, uid, repairedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true })
+            .catch(() => {});
+        }
         return res.json({
           success:   true,
           active,
@@ -221,9 +259,44 @@ router.get('/status', async (req, res) => {
           plan:      sub.planKey   || 'resource_termly',
         });
       }
+
+      // ── 3b. NEW: check for any completed payment by this phone ───────────────
+      try {
+        const completedPay = await db.collection('subscriptionPayments')
+          .where('phone', '==', phone)
+          .where('status', '==', 'completed')
+          .orderBy('createdAt', 'desc')
+          .limit(1)
+          .get();
+
+        if (!completedPay.empty) {
+          const pay       = completedPay.docs[0].data();
+          const plan      = PLAN_CONFIG[pay.planKey] || PLAN_CONFIG['resource_termly'];
+          const expiresAt = pay.expiresAt || calcExpiry(plan.daysValid);
+          const targetUid = uid || pay.uid;
+
+          // Write both indexes
+          if (targetUid) {
+            db.collection('subscribers').doc(targetUid).set({
+              uid: targetUid, phone, planKey: pay.planKey,
+              planLabel: plan.label, txRef: pay.txRef, expiresAt,
+              unlockedAt: admin.firestore.FieldValue.serverTimestamp(),
+              repairedFromPayment: true,
+            }, { merge: true }).catch(() => {});
+          }
+          db.collection('subscribersByPhone').doc(phone).set({
+            uid: targetUid || null, phone, planKey: pay.planKey,
+            txRef: pay.txRef, expiresAt,
+            unlockedAt: admin.firestore.FieldValue.serverTimestamp(),
+          }, { merge: true }).catch(() => {});
+
+          console.log(`[Status] ✅ Repaired from completed payment phone=${phone}`);
+          return res.json({ success: true, active: true, expiresAt, plan: pay.planKey });
+        }
+      } catch (_) {}
     }
 
-    // ── 4. checkoutId lookup (secondary) ─────────────────────────────────────
+    // ── 4. checkoutId lookup ──────────────────────────────────────────────────
     if (checkoutId) {
       const payDoc = await db.collection('subscriptionPayments').doc(checkoutId).get();
       if (!payDoc.exists)
@@ -240,7 +313,7 @@ router.get('/status', async (req, res) => {
       });
     }
 
-    // ── 5. Nothing found — still polling ─────────────────────────────────────
+    // ── 5. Nothing found ──────────────────────────────────────────────────────
     return res.json({ success: true, active: false, expiresAt: null });
 
   } catch (err) {
@@ -266,23 +339,119 @@ router.post('/webhook', async (req, res) => {
       payload = req.body;
     }
 
-    const data      = payload.data || {};
-    const tx        = data.transaction || {};
-    const txRef     = tx.reference || data.reference || payload.reference || null;
-    const rawStatus = tx.status    || data.status    || payload.status;
-    const eventType = payload.event_type || payload.event;
-    const mpesaCode = data.MpesaReceiptNumber || data.mpesa_receipt || null;
-    const mobile    = data.customer?.mobile_number || data.phone || null;
+    // ── RAW LOG — tells us exactly what Paynecta sends ──────────────────────
+    console.log('[Webhook] RAW:', JSON.stringify(payload));
 
-    console.log('[Webhook]', { eventType, txRef, rawStatus, mpesaCode });
+    // ── Wide field extraction — covers multiple Paynecta payload shapes ──────
+    const data      = payload.data       || payload.Body?.stkCallback || payload;
+    const tx        = data.transaction   || data.CallbackMetadata     || {};
+    const metaItems = tx.Item            || data.Item                 || null;
 
-    if (!txRef) return;
+    const txRef =
+      tx.reference                                    ||
+      data.reference                                  ||
+      payload.reference                               ||
+      payload.txRef                                   ||
+      payload.transaction_reference                   ||
+      data.transaction_reference                      ||
+      data.CheckoutRequestID                          ||
+      payload.CheckoutRequestID                       ||
+      data.id                                         ||
+      payload.id                                      ||
+      null;
+
+    const rawStatus =
+      tx.status       ||
+      data.status     ||
+      payload.status  ||
+      (data.ResultCode === 0   ? 'completed' :
+       data.ResultCode != null ? 'failed'    : null);
+
+    const eventType =
+      payload.event_type ||
+      payload.event      ||
+      (rawStatus === 'completed' || data.ResultCode === 0 ? 'payment.completed' :
+       rawStatus === 'failed'                             ? 'payment.failed'    : null);
+
+    const mpesaCode =
+      data.MpesaReceiptNumber                          ||
+      data.mpesa_receipt                               ||
+      tx.mpesa_receipt                                 ||
+      extractCallbackItem(metaItems, 'MpesaReceiptNumber') ||
+      null;
+
+    const mobile =
+      data.customer?.mobile_number                     ||
+      data.phone                                       ||
+      payload.phone                                    ||
+      extractCallbackItem(metaItems, 'PhoneNumber')    ||
+      null;
+
+    console.log('[Webhook] Parsed:', { eventType, txRef, rawStatus, mpesaCode, mobile });
+
+    if (!txRef) {
+      console.warn('[Webhook] ⚠️  txRef is null — cannot match payment. Full payload above.');
+      // Still try phone-based recovery if we have a success signal + phone
+      const isSuccessNoRef =
+        eventType === 'payment.completed' ||
+        ['completed', 'confirmed', 'success'].includes(rawStatus) ||
+        data.ResultCode === 0;
+
+      if (isSuccessNoRef && mobile) {
+        const phone = normalisePhone(mobile);
+        console.log('[Webhook] Attempting phone-based recovery for:', phone);
+        const db = getDb();
+        // Find the most recent pending payment for this phone
+        const paySnap = await db.collection('subscriptionPayments')
+          .where('phone', '==', phone)
+          .where('status', '==', 'pending')
+          .orderBy('createdAt', 'desc')
+          .limit(1)
+          .get();
+
+        if (!paySnap.empty) {
+          const payData   = paySnap.docs[0].data();
+          const payTxRef  = paySnap.docs[0].id;
+          const uid       = payData.uid;
+          const plan      = PLAN_CONFIG[payData.planKey] || PLAN_CONFIG['resource_termly'];
+          const expiresAt = calcExpiry(plan.daysValid);
+
+          await db.collection('subscriptionPayments').doc(payTxRef).update({
+            status: 'completed', mpesaCode: mpesaCode || null,
+            completedAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+
+          if (uid) {
+            await db.collection('subscribers').doc(uid).set({
+              uid, phone, planKey: payData.planKey || 'resource_termly',
+              planLabel: plan.label, txRef: payTxRef, mpesaCode: mpesaCode || null,
+              expiresAt, unlockedAt: admin.firestore.FieldValue.serverTimestamp(),
+              amount: payData.amount || plan.amount, recoveredByPhone: true,
+            }, { merge: true });
+            console.log(`[Webhook] ✅ Phone recovery: subscriber written uid=${uid}`);
+          }
+
+          await db.collection('subscribersByPhone').doc(phone).set({
+            uid: uid || null, phone, planKey: payData.planKey || 'resource_termly',
+            txRef: payTxRef, mpesaCode: mpesaCode || null, expiresAt,
+            unlockedAt: admin.firestore.FieldValue.serverTimestamp(),
+          }, { merge: true });
+
+          console.log(`[Webhook] ✅ Phone recovery complete phone=${phone}`);
+        } else {
+          console.warn('[Webhook] ⚠️  Phone recovery: no pending payment found for', phone);
+        }
+      }
+      return;
+    }
 
     const db          = getDb();
     const isCompleted = eventType === 'payment.completed' ||
-                        ['completed', 'confirmed', 'success'].includes(rawStatus);
+                        ['completed', 'confirmed', 'success'].includes(rawStatus) ||
+                        data.ResultCode === 0;
     const isFailed    = eventType === 'payment.failed' ||
-                        ['failed', 'cancelled', 'timeout'].includes(rawStatus);
+                        ['failed', 'cancelled', 'timeout'].includes(rawStatus) ||
+                        (data.ResultCode != null && data.ResultCode !== 0);
 
     if (isCompleted) {
       // 1. Mark payment completed
@@ -343,11 +512,11 @@ router.post('/webhook', async (req, res) => {
       await db.collection('subscriptionPayments').doc(txRef).update({
         lastEvent:     eventType || null,
         lastRawStatus: rawStatus || null,
-      });
+      }).catch(() => {}); // doc may not exist yet for intermediate events
     }
 
   } catch (err) {
-    console.error('[Webhook] Error:', err.message);
+    console.error('[Webhook] Error:', err.message, err.stack);
   }
 });
 
@@ -386,7 +555,6 @@ router.post('/verify-bypass', async (req, res) => {
       const plan      = PLAN_CONFIG[record.planKey] || PLAN_CONFIG['resource_termly'];
       const expiresAt = calcExpiry(plan.daysValid);
 
-      // Grant access if uid supplied and webhook was missed
       if (uid) {
         await db.collection('subscribers').doc(uid).set({
           uid,
