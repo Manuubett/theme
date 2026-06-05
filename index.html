@@ -1,7 +1,7 @@
 <!--
   CBE Resource Hub — Admin Panel
   Copyright © 2026 Bett Emanuel — https://bett.website
-  v2 — Full grade range (Grade 1–Form 5), light/dark toggle
+  v3 — Fixed: revenue from real amounts, subscriber names, active count by expiresAt
 -->
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
@@ -13,8 +13,6 @@
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-
-/* ══ DARK THEME (default) ══ */
 :root,[data-theme="dark"]{
   --bg:#07090f;--bg2:#0d1117;--bg3:#111827;--bg4:#1a2235;
   --surf:#161e2e;--surf2:#1c2640;
@@ -28,8 +26,6 @@
   --shadow:0 4px 24px rgba(0,0,0,.5);
   --toggle-icon:"🌙";
 }
-
-/* ══ LIGHT THEME ══ */
 [data-theme="light"]{
   --bg:#f0f4f8;--bg2:#ffffff;--bg3:#e8edf5;--bg4:#dde4f0;
   --surf:#ffffff;--surf2:#f5f8fc;
@@ -43,27 +39,11 @@
   --shadow:0 2px 12px rgba(0,0,0,.08);
   --toggle-icon:"☀️";
 }
-
 body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);font-size:14px;min-height:100vh;display:flex;transition:background .25s,color .25s}
-
-/* ══ THEME TOGGLE BUTTON ══ */
-.theme-toggle{
-  width:34px;height:34px;border-radius:8px;
-  background:var(--bg3);border:1px solid var(--border2);
-  cursor:pointer;display:grid;place-items:center;
-  font-size:15px;transition:all .2s;flex-shrink:0;
-}
+.theme-toggle{width:34px;height:34px;border-radius:8px;background:var(--bg3);border:1px solid var(--border2);cursor:pointer;display:grid;place-items:center;font-size:15px;transition:all .2s;flex-shrink:0;}
 .theme-toggle:hover{border-color:var(--accent);background:var(--bg4)}
 .theme-toggle::after{content:var(--toggle-icon)}
-
-/* ══ SIDEBAR ══ */
-.sidebar{
-  width:220px;min-height:100vh;background:var(--bg2);
-  border-right:1px solid var(--border);
-  display:flex;flex-direction:column;
-  position:fixed;top:0;left:0;bottom:0;z-index:100;
-  flex-shrink:0;transition:background .25s,border-color .25s;
-}
+.sidebar{width:220px;min-height:100vh;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;flex-shrink:0;transition:background .25s,border-color .25s;}
 .sb-logo{padding:20px 18px 16px;border-bottom:1px solid var(--border);}
 .sb-logo-mark{width:32px;height:32px;background:var(--accent);border-radius:8px;display:grid;place-items:center;font-size:14px;font-weight:800;font-family:'JetBrains Mono',monospace;color:#fff;margin-bottom:10px;}
 .sb-logo-name{font-size:13px;font-weight:700;letter-spacing:-.3px}
@@ -80,15 +60,11 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);font
 .sb-avatar{width:30px;height:30px;border-radius:8px;background:var(--alight);border:1px solid var(--border2);display:grid;place-items:center;font-size:12px;flex-shrink:0;}
 .sb-uname{font-size:12px;font-weight:600;line-height:1.2}
 .sb-urole{font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace}
-
-/* ══ MAIN ══ */
 .main{margin-left:220px;flex:1;display:flex;flex-direction:column;min-height:100vh}
 .topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 24px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:90;transition:background .25s,border-color .25s;}
 .topbar-title{font-size:15px;font-weight:700;letter-spacing:-.3px}
 .topbar-r{display:flex;align-items:center;gap:10px}
 .content{padding:24px;flex:1}
-
-/* ══ BUTTONS ══ */
 .btn{display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:8px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .14s;white-space:nowrap;}
 .btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:var(--accent2)}
 .btn-gold{background:var(--gold);color:#000}.btn-gold:hover{background:var(--gold2)}
@@ -96,8 +72,6 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);font
 .btn-danger{background:var(--redlight);color:var(--red);border:1px solid rgba(239,68,68,.25)}.btn-danger:hover{background:var(--red);color:#fff}
 .btn-outline{background:none;border:1px solid var(--border2);color:var(--text2)}.btn-outline:hover{background:var(--bg4);color:var(--text);border-color:var(--border3)}
 .btn-sm{padding:5px 11px;font-size:12px}.btn-xs{padding:3px 8px;font-size:11px}
-
-/* ══ STAT CARDS ══ */
 .stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px}
 .stat-card{background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:18px 20px;position:relative;overflow:hidden;box-shadow:var(--shadow);transition:background .25s,border-color .25s;}
 .stat-card::after{content:'';position:absolute;top:0;right:0;width:60px;height:60px;border-radius:0 12px 0 60px;opacity:.08;}
@@ -106,11 +80,7 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);font
 .stat-val{font-size:28px;font-weight:800;font-family:'JetBrains Mono',monospace;line-height:1}
 .stat-val.blue{color:var(--accent)}.stat-val.gold{color:var(--gold)}.stat-val.green{color:var(--green)}.stat-val.purple{color:var(--purple)}
 .stat-sub{font-size:11px;color:var(--text3);margin-top:6px}
-
-/* ══ PANELS ══ */
 .panel{display:none}.panel.active{display:block}
-
-/* ══ UPLOAD ZONE ══ */
 .upload-zone{border:2px dashed var(--border2);border-radius:12px;padding:40px 24px;text-align:center;cursor:pointer;transition:all .2s;background:var(--surf);margin-bottom:20px;position:relative;}
 .upload-zone:hover,.upload-zone.drag{border-color:var(--accent);background:var(--alight);}
 .upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
@@ -121,8 +91,6 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);font
 .uz-type{padding:2px 10px;border-radius:4px;font-size:10.5px;font-weight:700;font-family:'JetBrains Mono',monospace;}
 .uz-type.pdf{background:rgba(239,68,68,.15);color:#f87171}
 .uz-type.docx{background:rgba(59,130,246,.15);color:#60a5fa}
-
-/* ══ FILE PREVIEW ══ */
 .file-preview{background:var(--surf);border:1px solid var(--border2);border-radius:12px;padding:16px;margin-bottom:20px;display:none;transition:background .25s;}
 .fp-head{display:flex;align-items:center;gap:12px;margin-bottom:14px}
 .fp-icon{width:44px;height:44px;border-radius:10px;display:grid;place-items:center;font-size:20px;flex-shrink:0;}
@@ -130,8 +98,6 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);font
 .fp-name{font-size:13px;font-weight:700;line-height:1.3}
 .fp-size{font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace;margin-top:2px}
 .fp-clear{margin-left:auto}
-
-/* ══ FORM ══ */
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .form-row{display:flex;flex-direction:column;gap:5px}
 .form-label{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;}
@@ -140,10 +106,6 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);font
 .form-input::placeholder,.form-textarea::placeholder{color:var(--text3)}
 .form-select option,.form-select optgroup{background:var(--bg3);color:var(--text)}
 .form-textarea{resize:vertical;min-height:72px;line-height:1.5}
-
-/* Grade optgroup styling hint */
-.form-select optgroup{font-weight:700;font-size:11px;color:var(--text3)}
-
 .toggle-row{display:flex;align-items:center;justify-content:space-between;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:10px 13px;transition:background .25s;}
 .toggle-label{font-size:13px;font-weight:500}
 .toggle-sub{font-size:11px;color:var(--text3);margin-top:1px}
@@ -151,14 +113,10 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);font
 .toggle.on{background:var(--green)}
 .toggle::after{content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .2s;}
 .toggle.on::after{transform:translateX(18px)}
-
-/* ══ PROGRESS BAR ══ */
 .upload-progress{display:none;margin-bottom:16px}
 .up-bar-wrap{background:var(--bg3);border-radius:4px;height:6px;overflow:hidden;margin-bottom:8px}
 .up-bar{height:100%;background:var(--accent);border-radius:4px;width:0%;transition:width .3s}
 .up-status{font-size:12px;color:var(--text2);display:flex;justify-content:space-between}
-
-/* ══ TABLE ══ */
 .tbl-card{background:var(--surf);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:var(--shadow);transition:background .25s,border-color .25s;}
 .tbl-head{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
 .tbl-search{padding:7px 12px 7px 34px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-family:'Outfit',sans-serif;font-size:13px;outline:none;width:240px;transition:border-color .15s,width .2s,background .25s;}
@@ -174,7 +132,6 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);font
 .res-title-cell{font-weight:600;max-width:220px}
 .res-title-cell .rt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
 .res-title-cell .rs{font-size:11px;color:var(--text3);margin-top:2px}
-
 .badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;font-family:'JetBrains Mono',monospace;white-space:nowrap;}
 .badge-free{background:var(--grnlight);color:var(--green);border:1px solid rgba(16,185,129,.25)}
 .badge-premium{background:var(--glight);color:var(--gold);border:1px solid rgba(245,158,11,.25)}
@@ -182,17 +139,11 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);font
 .badge-docx{background:var(--alight);color:#60a5fa;border:1px solid rgba(59,130,246,.2)}
 .badge-type{background:var(--bg4);color:var(--text2);border:1px solid var(--border2)}
 .badge-cbe{background:rgba(167,139,250,.1);color:var(--purple);border:1px solid rgba(167,139,250,.25)}
-
 .dl-count{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent)}
 .tbl-actions{display:flex;gap:5px;align-items:center}
-
-/* ══ SUBSCRIBER TABLE ══ */
 .sub-status-active{color:var(--green);font-weight:700;font-size:12px}
 .sub-status-expired{color:var(--red);font-size:12px}
-.sub-status-pending{color:var(--gold);font-size:12px}
 .exp-date{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--text2)}
-
-/* ══ MODALS ══ */
 .modal-overlay{display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:20px;}
 .modal-overlay.open{display:flex}
 .modal{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:28px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,.8);transition:background .25s;}
@@ -205,8 +156,6 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);font
 .del-title{font-size:16px;font-weight:700;text-align:center;margin-bottom:8px}
 .del-sub{font-size:13px;color:var(--text2);text-align:center;line-height:1.6;margin-bottom:20px}
 .del-name{color:var(--red);font-weight:700}
-
-/* ══ DASHBOARD CARDS ══ */
 .two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
 .section-card{background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:20px;box-shadow:var(--shadow);transition:background .25s,border-color .25s;}
 .section-title{font-size:14px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px}
@@ -218,20 +167,14 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);font
 .top-title{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .top-type{font-size:11px;color:var(--text3)}
 .top-dl{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--accent);flex-shrink:0}
-
-/* ══ CHIPS ══ */
 .chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
 .chip{padding:4px 12px;border-radius:20px;font-size:11.5px;font-weight:600;border:1px solid var(--border2);background:none;color:var(--text2);cursor:pointer;transition:all .13s;font-family:'Outfit',sans-serif;}
 .chip:hover{border-color:var(--accent);color:var(--accent)}
 .chip.active{background:var(--accent);border-color:var(--accent);color:#fff}
-
-/* ══ EMPTY ══ */
 .empty{text-align:center;padding:48px 20px;color:var(--text3)}
 .empty-icon{font-size:36px;margin-bottom:12px}
 .empty-title{font-size:15px;font-weight:600;color:var(--text2);margin-bottom:6px}
 .empty-sub{font-size:12.5px}
-
-/* ══ TOAST ══ */
 #tc{position:fixed;top:62px;right:16px;z-index:9999;display:flex;flex-direction:column;gap:6px;pointer-events:none}
 .t{display:flex;align-items:center;gap:8px;padding:10px 16px;border-radius:8px;font-size:12.5px;font-weight:500;box-shadow:0 8px 32px rgba(0,0,0,.3);animation:tin .25s ease;min-width:220px;pointer-events:auto;}
 .t.ok {background:#064e3b;color:#ecfdf5;border-left:3px solid var(--green)}
@@ -242,18 +185,13 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);font
 [data-theme="light"] .t.info{background:#dbeafe;color:#1e3a5f}
 @keyframes tin{from{transform:translateX(110%);opacity:0}to{transform:translateX(0);opacity:1}}
 @keyframes tout{to{transform:translateX(110%);opacity:0}}
-
-/* ══ SPINNER ══ */
 .spin{width:16px;height:16px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:sp .65s linear infinite;flex-shrink:0}
 @keyframes sp{to{transform:rotate(360deg)}}
-
-/* ══ LOGIN GATE ══ */
 #loginGate{position:fixed;inset:0;z-index:999;background:var(--bg);display:flex;align-items:center;justify-content:center;transition:background .25s;}
 .login-box{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:36px;width:100%;max-width:380px;text-align:center;transition:background .25s;}
 .login-logo{font-size:36px;margin-bottom:16px}
 .login-title{font-size:20px;font-weight:800;margin-bottom:6px}
 .login-sub{font-size:13px;color:var(--text2);margin-bottom:24px}
-
 @media(max-width:900px){
   .two-col{grid-template-columns:1fr}
   .sidebar{transform:translateX(-100%)}
@@ -294,14 +232,8 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);font
     </div>
     <div style="display:flex;flex-direction:column;gap:14px">
       <input type="hidden" id="editId">
-      <div class="form-row">
-        <label class="form-label">Title</label>
-        <input class="form-input" id="editTitle" placeholder="Resource title">
-      </div>
-      <div class="form-row">
-        <label class="form-label">Description</label>
-        <textarea class="form-textarea" id="editDesc" placeholder="Brief description"></textarea>
-      </div>
+      <div class="form-row"><label class="form-label">Title</label><input class="form-input" id="editTitle" placeholder="Resource title"></div>
+      <div class="form-row"><label class="form-label">Description</label><textarea class="form-textarea" id="editDesc" placeholder="Brief description"></textarea></div>
       <div class="form-grid">
         <div class="form-row">
           <label class="form-label">Type</label>
@@ -313,24 +245,11 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);font
             <option value="notes">📚 Revision Notes</option>
           </select>
         </div>
-        <div class="form-row">
-          <label class="form-label">Grade / Form</label>
-          <select class="form-select" id="editGrades">
-            <!-- Populated by JS -->
-          </select>
-        </div>
+        <div class="form-row"><label class="form-label">Grade / Form</label><select class="form-select" id="editGrades"></select></div>
       </div>
-      <div class="form-row">
-        <label class="form-label">Subject</label>
-        <select class="form-select" id="editSubject">
-          <!-- Populated by JS -->
-        </select>
-      </div>
+      <div class="form-row"><label class="form-label">Subject</label><select class="form-select" id="editSubject"></select></div>
       <div class="toggle-row">
-        <div>
-          <div class="toggle-label">Free Resource</div>
-          <div class="toggle-sub">Visible without subscription</div>
-        </div>
+        <div><div class="toggle-label">Free Resource</div><div class="toggle-sub">Visible without subscription</div></div>
         <button class="toggle" id="editFreeToggle" onclick="toggleEdit()"></button>
       </div>
       <div style="display:flex;gap:10px;margin-top:4px">
@@ -346,10 +265,7 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);font
   <div class="modal del-modal">
     <div class="del-icon">🗑️</div>
     <div class="del-title">Delete Resource?</div>
-    <div class="del-sub">
-      <span class="del-name" id="delName">—</span><br>
-      This permanently removes the file from R2 and Firestore. Cannot be undone.
-    </div>
+    <div class="del-sub"><span class="del-name" id="delName">—</span><br>This permanently removes the file from R2 and Firestore. Cannot be undone.</div>
     <div style="display:flex;gap:10px">
       <button class="btn btn-outline" style="flex:1;justify-content:center" onclick="closeDelete()">Cancel</button>
       <button class="btn btn-danger" style="flex:1;justify-content:center" onclick="confirmDelete()" id="delBtn">Delete Forever</button>
@@ -384,7 +300,7 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);font
     </button>
     <button class="nav-item" onclick="switchPanel('payments',this)"><span class="ni">💳</span> Payments</button>
     <div class="sb-section">Tools</div>
-    <button class="nav-item" onclick="window.open('resources.html','_blank')"><span class="ni">🔗</span> View Public Page</button>
+    <button class="nav-item" onclick="window.open('index.html','_blank')"><span class="ni">🔗</span> View Public Page</button>
   </div>
   <div class="sb-footer">
     <div class="sb-user">
@@ -407,54 +323,28 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);font
       <button class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode"></button>
     </div>
   </div>
-
   <div class="content">
 
-    <!-- ══ DASHBOARD ══ -->
+    <!-- DASHBOARD -->
     <div class="panel active" id="panel-dashboard">
       <div class="stats-row">
-        <div class="stat-card blue">
-          <div class="stat-label">Total Resources</div>
-          <div class="stat-val blue" id="st-total">—</div>
-          <div class="stat-sub" id="st-breakdown">Loading…</div>
-        </div>
-        <div class="stat-card green">
-          <div class="stat-label">Total Downloads</div>
-          <div class="stat-val green" id="st-dl">—</div>
-          <div class="stat-sub" id="st-dl30">Last 30 days: —</div>
-        </div>
-        <div class="stat-card gold">
-          <div class="stat-label">Active Subscribers</div>
-          <div class="stat-val gold" id="st-subs">—</div>
-          <div class="stat-sub">Paid plans</div>
-        </div>
-        <div class="stat-card purple">
-          <div class="stat-label">Est. Revenue</div>
-          <div class="stat-val purple" id="st-rev">—</div>
-          <div class="stat-sub">This term</div>
-        </div>
+        <div class="stat-card blue"><div class="stat-label">Total Resources</div><div class="stat-val blue" id="st-total">—</div><div class="stat-sub" id="st-breakdown">Loading…</div></div>
+        <div class="stat-card green"><div class="stat-label">Total Downloads</div><div class="stat-val green" id="st-dl">—</div><div class="stat-sub" id="st-dl30">Last 30 days: —</div></div>
+        <div class="stat-card gold"><div class="stat-label">Active Subscribers</div><div class="stat-val gold" id="st-subs">—</div><div class="stat-sub">Paid plans · not expired</div></div>
+        <div class="stat-card purple"><div class="stat-label">Est. Revenue</div><div class="stat-val purple" id="st-rev">—</div><div class="stat-sub">From active subs</div></div>
       </div>
       <div class="two-col">
-        <div class="section-card">
-          <div class="section-title">🏆 Top Downloaded</div>
-          <div class="top-list" id="topList"><div class="empty"><div class="spin" style="margin:0 auto"></div></div></div>
-        </div>
-        <div class="section-card">
-          <div class="section-title">📅 Recent Uploads</div>
-          <div id="recentList" style="display:flex;flex-direction:column;gap:8px"><div class="empty"><div class="spin" style="margin:0 auto"></div></div></div>
-        </div>
+        <div class="section-card"><div class="section-title">🏆 Top Downloaded</div><div class="top-list" id="topList"><div class="empty"><div class="spin" style="margin:0 auto"></div></div></div></div>
+        <div class="section-card"><div class="section-title">📅 Recent Uploads</div><div id="recentList" style="display:flex;flex-direction:column;gap:8px"><div class="empty"><div class="spin" style="margin:0 auto"></div></div></div></div>
       </div>
     </div>
 
-    <!-- ══ UPLOAD PANEL ══ -->
+    <!-- UPLOAD PANEL -->
     <div class="panel" id="panel-upload">
       <div style="background:linear-gradient(135deg,var(--glight),var(--alight));border:1px solid rgba(245,158,11,.3);border-radius:12px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
         <div style="display:flex;align-items:center;gap:12px">
           <span style="font-size:28px">📦</span>
-          <div>
-            <div style="font-size:14px;font-weight:700;color:var(--gold)">Upload Multiple Files at Once</div>
-            <div style="font-size:12px;color:var(--text2);margin-top:2px">Drop up to 50 PDFs or DOCXs — auto-detects grade, subject and type from filenames</div>
-          </div>
+          <div><div style="font-size:14px;font-weight:700;color:var(--gold)">Upload Multiple Files at Once</div><div style="font-size:12px;color:var(--text2);margin-top:2px">Drop up to 50 PDFs or DOCXs — auto-detects grade, subject and type from filenames</div></div>
         </div>
         <button class="btn btn-gold" onclick="window.open('bulk-upload.html','_blank')" style="flex-shrink:0">Open Bulk Upload →</button>
       </div>
@@ -487,17 +377,10 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);font
         <div class="section-card">
           <div class="section-title">📋 Resource Details</div>
           <div style="display:flex;flex-direction:column;gap:14px">
-            <div class="form-row">
-              <label class="form-label">Title *</label>
-              <input class="form-input" id="upTitle" placeholder="e.g. Grade 4 Math End of Term 1 Exam">
-            </div>
-            <div class="form-row">
-              <label class="form-label">Description *</label>
-              <textarea class="form-textarea" id="upDesc" placeholder="Brief description…"></textarea>
-            </div>
+            <div class="form-row"><label class="form-label">Title *</label><input class="form-input" id="upTitle" placeholder="e.g. Grade 4 Math End of Term 1 Exam"></div>
+            <div class="form-row"><label class="form-label">Description *</label><textarea class="form-textarea" id="upDesc" placeholder="Brief description…"></textarea></div>
             <div class="form-grid">
-              <div class="form-row">
-                <label class="form-label">Type *</label>
+              <div class="form-row"><label class="form-label">Type *</label>
                 <select class="form-select" id="upType">
                   <option value="">-- Select type --</option>
                   <option value="lesson">📖 Lesson Plan</option>
@@ -507,29 +390,13 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);font
                   <option value="notes">📚 Revision Notes</option>
                 </select>
               </div>
-              <div class="form-row">
-                <label class="form-label">Grade / Form *</label>
-                <select class="form-select" id="upGrades">
-                  <option value="">-- Select --</option>
-                </select>
-              </div>
+              <div class="form-row"><label class="form-label">Grade / Form *</label><select class="form-select" id="upGrades"><option value="">-- Select --</option></select></div>
             </div>
             <div class="form-grid">
-              <div class="form-row">
-                <label class="form-label">Subject</label>
-                <select class="form-select" id="upSubject">
-                  <option value="">-- Subject --</option>
-                </select>
-              </div>
-              <div class="form-row">
-                <label class="form-label">Pages</label>
-                <input class="form-input" type="number" id="upPages" placeholder="e.g. 8" min="1" max="500">
-              </div>
+              <div class="form-row"><label class="form-label">Subject</label><select class="form-select" id="upSubject"><option value="">-- Subject --</option></select></div>
+              <div class="form-row"><label class="form-label">Pages</label><input class="form-input" type="number" id="upPages" placeholder="e.g. 8" min="1" max="500"></div>
             </div>
-            <div class="form-row">
-              <label class="form-label">Icon (emoji)</label>
-              <input class="form-input" id="upIcon" placeholder="📄" maxlength="4" style="font-size:20px;text-align:center;width:80px">
-            </div>
+            <div class="form-row"><label class="form-label">Icon (emoji)</label><input class="form-input" id="upIcon" placeholder="📄" maxlength="4" style="font-size:20px;text-align:center;width:80px"></div>
             <div class="toggle-row">
               <div><div class="toggle-label">Free Resource</div><div class="toggle-sub">Available without subscription</div></div>
               <button class="toggle" id="freeToggle" onclick="toggleFree()"></button>
@@ -540,14 +407,11 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);font
       </div>
     </div>
 
-    <!-- ══ MANAGE PANEL ══ -->
+    <!-- MANAGE PANEL -->
     <div class="panel" id="panel-manage">
       <div class="tbl-card">
         <div class="tbl-head">
-          <div class="tbl-search-wrap">
-            <span class="tbl-search-icon">🔍</span>
-            <input class="tbl-search" placeholder="Search resources…" oninput="filterManage()" id="manageSearch">
-          </div>
+          <div class="tbl-search-wrap"><span class="tbl-search-icon">🔍</span><input class="tbl-search" placeholder="Search resources…" oninput="filterManage()" id="manageSearch"></div>
           <div style="display:flex;gap:8px;align-items:center">
             <div class="chips" style="margin:0" id="manageChips">
               <button class="chip active" onclick="setManageFilter('all',this)">All</button>
@@ -561,26 +425,18 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);font
         </div>
         <div style="overflow-x:auto">
           <table class="data-table" id="manageTable">
-            <thead><tr>
-              <th style="width:32px">#</th><th>Resource</th><th>Type</th>
-              <th>Grade</th><th>Format</th><th>Access</th><th>Downloads</th><th>Actions</th>
-            </tr></thead>
-            <tbody id="manageTbody">
-              <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text3)"><div class="spin" style="margin:0 auto 10px"></div>Loading…</td></tr>
-            </tbody>
+            <thead><tr><th style="width:32px">#</th><th>Resource</th><th>Type</th><th>Grade</th><th>Format</th><th>Access</th><th>Downloads</th><th>Actions</th></tr></thead>
+            <tbody id="manageTbody"><tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text3)"><div class="spin" style="margin:0 auto 10px"></div>Loading…</td></tr></tbody>
           </table>
         </div>
       </div>
     </div>
 
-    <!-- ══ SUBSCRIBERS PANEL ══ -->
+    <!-- SUBSCRIBERS PANEL -->
     <div class="panel" id="panel-subscribers">
       <div class="tbl-card">
         <div class="tbl-head">
-          <div class="tbl-search-wrap">
-            <span class="tbl-search-icon">🔍</span>
-            <input class="tbl-search" placeholder="Search subscribers…" oninput="filterSubs()" id="subSearch">
-          </div>
+          <div class="tbl-search-wrap"><span class="tbl-search-icon">🔍</span><input class="tbl-search" placeholder="Search by name or phone…" oninput="filterSubs()" id="subSearch"></div>
           <div class="chips" style="margin:0">
             <button class="chip active" onclick="setSubFilter('all',this)">All</button>
             <button class="chip" onclick="setSubFilter('active',this)">Active</button>
@@ -597,7 +453,7 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);font
       </div>
     </div>
 
-    <!-- ══ PAYMENTS PANEL ══ -->
+    <!-- PAYMENTS PANEL -->
     <div class="panel" id="panel-payments">
       <div class="tbl-card">
         <div class="tbl-head">
@@ -606,6 +462,16 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);font
         </div>
         <div style="overflow-x:auto">
           <table class="data-table"><thead><tr>
+            <!-- Paste this next to the 🔄 Refresh button inside the payments tbl-head --
+<button class="btn btn-outline btn-sm" 
+  onclick="resetPayments()" 
+  id="resetPayBtn"
+  style="opacity:0.15; font-size:10px; padding:3px 8px; border-color:var(--red); color:var(--red);"
+  onmouseover="this.style.opacity='1'"
+  onmouseout="this.style.opacity='0.15'"
+  title="Reset all payments to zero">
+  💀
+</button> --->
             <th>#</th><th>Name / Phone</th><th>Plan</th><th>Amount</th><th>Status</th><th>Date</th><th>Tx Ref</th>
           </tr></thead>
           <tbody id="payTbody"><tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text3)"><div class="spin" style="margin:0 auto 10px"></div>Loading…</td></tr></tbody>
@@ -614,66 +480,45 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);font
       </div>
     </div>
 
-  </div><!-- /content -->
-</div><!-- /main -->
+  </div>
+</div>
 
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 <script>
 firebase.initializeApp({
-  apiKey:            "AIzaSyDPZLbDio7OibE-FEXqFF1OdhM0qZc3yII",
-  authDomain:        "divine-treat-450709-b5.firebaseapp.com",
-  projectId:         "divine-treat-450709-b5",
-  storageBucket:     "divine-treat-450709-b5.firebasestorage.app",
-  messagingSenderId: "866518506476",
-  appId:             "1:866518506476:web:e2d3618b61f88e1f6a3ec9",
+  apiKey:"AIzaSyDPZLbDio7OibE-FEXqFF1OdhM0qZc3yII",
+  authDomain:"divine-treat-450709-b5.firebaseapp.com",
+  projectId:"divine-treat-450709-b5",
+  storageBucket:"divine-treat-450709-b5.firebasestorage.app",
+  messagingSenderId:"866518506476",
+  appId:"1:866518506476:web:e2d3618b61f88e1f6a3ec9",
 });
 const db   = firebase.firestore();
 const auth = firebase.auth();
 auth.setPersistence(firebase.auth.Auth.Persistence.SESSION).catch(()=>{});
 const BACKEND = 'https://cbe-y1zb.onrender.com';
 
-/* ════════════════════════════════════════════
-   THEME TOGGLE
-════════════════════════════════════════════ */
-function toggleTheme() {
-  const h = document.documentElement;
-  h.dataset.theme = h.dataset.theme === 'dark' ? 'light' : 'dark';
-  localStorage.setItem('admin-theme', h.dataset.theme);
-}
-(function(){
-  const saved = localStorage.getItem('admin-theme');
-  if (saved) document.documentElement.dataset.theme = saved;
-})();
+/* ── THEME ── */
+function toggleTheme(){const h=document.documentElement;h.dataset.theme=h.dataset.theme==='dark'?'light':'dark';localStorage.setItem('admin-theme',h.dataset.theme);}
+(function(){const s=localStorage.getItem('admin-theme');if(s)document.documentElement.dataset.theme=s;})();
 
-/* ════════════════════════════════════════════
-   GRADE & SUBJECT DATA
-   Full range: Grade 1–6, Grade 7–9, Form 1–5 (Gr 10–14)
-════════════════════════════════════════════ */
+/* ── GRADE & SUBJECT DATA ── */
 const GRADE_OPTIONS_HTML = `
   <optgroup label="Lower Primary">
-    <option value="1">Grade 1</option>
-    <option value="2">Grade 2</option>
-    <option value="3">Grade 3</option>
-    <option value="4">Grade 4</option>
-    <option value="5">Grade 5</option>
-    <option value="6">Grade 6</option>
+    <option value="1">Grade 1</option><option value="2">Grade 2</option><option value="3">Grade 3</option>
+    <option value="4">Grade 4</option><option value="5">Grade 5</option><option value="6">Grade 6</option>
     <option value="1-6">Grade 1–6 (All Lower)</option>
   </optgroup>
   <optgroup label="Junior Secondary (CBC)">
-    <option value="7">Grade 7</option>
-    <option value="8">Grade 8</option>
-    <option value="9">Grade 9</option>
+    <option value="7">Grade 7</option><option value="8">Grade 8</option><option value="9">Grade 9</option>
     <option value="7-9">Grade 7–9 (All CBC)</option>
   </optgroup>
   <optgroup label="Senior Secondary (CBE)">
-    <option value="10">Form 1 (Grade 10)</option>
-    <option value="11">Form 2 (Grade 11)</option>
-    <option value="12">Form 3 (Grade 12)</option>
-    <option value="13">Form 4 (Grade 13)</option>
-    <option value="14">Form 5 (Grade 14)</option>
-    <option value="10-14">Form 1–5 (All CBE)</option>
+    <option value="10">Form 1 (Grade 10)</option><option value="11">Form 2 (Grade 11)</option>
+    <option value="12">Form 3 (Grade 12)</option><option value="13">Form 4 (Grade 13)</option>
+    <option value="14">Form 5 (Grade 14)</option><option value="10-14">Form 1–5 (All CBE)</option>
   </optgroup>
   <optgroup label="Multi-Grade">
     <option value="1-14">All Grades (1–Form 5)</option>
@@ -681,205 +526,160 @@ const GRADE_OPTIONS_HTML = `
 
 const SUBJECT_OPTIONS_HTML = `
   <option value="">-- Subject --</option>
-  <optgroup label="Lower Primary & CBC (Gr 1–9)">
-    <option>Mathematics</option>
-    <option>English</option>
-    <option>Kiswahili</option>
-    <option>Integrated Science</option>
-    <option>Social Studies</option>
-    <option>Religious Education</option>
-    <option>Creative Arts &amp; Sports</option>
-    <option>Pre-Technical Studies</option>
-    <option>Agriculture &amp; Nutrition</option>
+  <optgroup label="Lower Primary &amp; CBC (Gr 1–9)">
+    <option>Mathematics</option><option>English</option><option>Kiswahili</option>
+    <option>Integrated Science</option><option>Social Studies</option>
+    <option>Religious Education</option><option>Creative Arts &amp; Sports</option>
+    <option>Pre-Technical Studies</option><option>Agriculture &amp; Nutrition</option>
   </optgroup>
   <optgroup label="Senior Secondary (Form 1–5)">
-    <option>Mathematics</option>
-    <option>English</option>
-    <option>Kiswahili</option>
-    <option>Physics</option>
-    <option>Chemistry</option>
-    <option>Biology</option>
-    <option>History &amp; Government</option>
-    <option>Geography</option>
-    <option>Religious Education</option>
-    <option>Business Studies</option>
-    <option>Computer Studies</option>
-    <option>Agriculture &amp; Nutrition</option>
+    <option>Mathematics</option><option>English</option><option>Kiswahili</option>
+    <option>Physics</option><option>Chemistry</option><option>Biology</option>
+    <option>History &amp; Government</option><option>Geography</option>
+    <option>Religious Education</option><option>Business Studies</option>
+    <option>Computer Studies</option><option>Agriculture &amp; Nutrition</option>
     <option>Creative Arts &amp; Sports</option>
   </optgroup>
   <option value="All Subjects">All Subjects</option>`;
 
-// Populate all grade & subject selects on load
-function populateSelects() {
-  ['upGrades','editGrades'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.innerHTML = (id==='upGrades'?'<option value="">-- Select --</option>':'') + GRADE_OPTIONS_HTML;
+function populateSelects(){
+  ['upGrades','editGrades'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.innerHTML=(id==='upGrades'?'<option value="">-- Select --</option>':'')+GRADE_OPTIONS_HTML;
   });
-  ['upSubject','editSubject'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.innerHTML = SUBJECT_OPTIONS_HTML;
+  ['upSubject','editSubject'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.innerHTML=SUBJECT_OPTIONS_HTML;
   });
 }
 
-function gradeBadgeClass(g) {
-  const n = parseInt(g);
-  if (n >= 10 || g === '10-14') return 'badge-cbe';
-  return 'badge-type';
-}
-
-function gradeDisplayLabel(g) {
-  const map = {
-    '1':'Gr 1','2':'Gr 2','3':'Gr 3','4':'Gr 4','5':'Gr 5','6':'Gr 6',
-    '7':'Gr 7','8':'Gr 8','9':'Gr 9',
+function gradeBadgeClass(g){return parseInt(g)>=10||g==='10-14'?'badge-cbe':'badge-type';}
+function gradeDisplayLabel(g){
+  const map={'1':'Gr 1','2':'Gr 2','3':'Gr 3','4':'Gr 4','5':'Gr 5','6':'Gr 6','7':'Gr 7','8':'Gr 8','9':'Gr 9',
     '10':'Form 1','11':'Form 2','12':'Form 3','13':'Form 4','14':'Form 5',
-    '1-6':'Gr 1–6','7-9':'Gr 7–9','10-14':'Form 1–5','1-14':'All',
-    '1-3':'Gr 1–3','4-6':'Gr 4–6','1-9':'Gr 1–9',
-  };
-  return map[g] || ('Gr '+g);
+    '1-6':'Gr 1–6','7-9':'Gr 7–9','10-14':'Form 1–5','1-14':'All','1-3':'Gr 1–3','4-6':'Gr 4–6','1-9':'Gr 1–9'};
+  return map[g]||('Gr '+g);
 }
 
-/* ════════════════════════════════════════════
-   STATE
-════════════════════════════════════════════ */
-let currentUser = null;
-let allResources = [], allSubs = [], allPayments = [];
-let manageFilter = 'all', subFilter = 'all';
-let selectedFile = null;
-let editFreeVal = false, freeVal = false;
-let deleteTarget = null;
+/* ── STATE ── */
+let currentUser=null,allResources=[],allSubs=[],allPayments=[];
+let manageFilter='all',subFilter='all';
+let selectedFile=null,editFreeVal=false,freeVal=false,deleteTarget=null;
 
-// Clock
-setInterval(()=>{
-  const el = document.getElementById('topbarTime');
-  if(el) el.textContent = new Date().toLocaleTimeString('en-KE',{hour:'2-digit',minute:'2-digit'});
-},1000);
+setInterval(()=>{const el=document.getElementById('topbarTime');if(el)el.textContent=new Date().toLocaleTimeString('en-KE',{hour:'2-digit',minute:'2-digit'});},1000);
 
-/* ════════════════════════════════════════════
-   AUTH
-════════════════════════════════════════════ */
-auth.onAuthStateChanged(async user => {
-  if (!user){ showLogin(); return; }
-  try {
-    const snap = await db.collection('users').doc(user.uid).get();
-    if (!snap.exists){ await auth.signOut(); showLogin(); return; }
-    const data = snap.data();
-    if (data.role !== 'owner' && data.role !== 'admin'){
+/* ── AUTH ── */
+auth.onAuthStateChanged(async user=>{
+  if(!user){showLogin();return;}
+  try{
+    const snap=await db.collection('users').doc(user.uid).get();
+    if(!snap.exists){await auth.signOut();showLogin();return;}
+    const data=snap.data();
+    if(data.role!=='owner'&&data.role!=='admin'){
       await auth.signOut();
-      document.getElementById('lgErr').textContent = 'Owner access required';
-      document.getElementById('lgErr').style.display = 'block';
-      showLogin(); return;
+      document.getElementById('lgErr').textContent='Owner access required';
+      document.getElementById('lgErr').style.display='block';
+      showLogin();return;
     }
-    currentUser = {...data, uid: user.uid};
-    document.getElementById('sidebarName').textContent = data.fullName || data.name || user.email;
-    hideLogin();
-    populateSelects();
-    initDashboard();
-  } catch(e){ showLogin(); }
+    currentUser={...data,uid:user.uid};
+    document.getElementById('sidebarName').textContent=data.fullName||data.name||user.email;
+    hideLogin();populateSelects();initDashboard();
+  }catch(e){showLogin();}
 });
-
-function showLogin(){ document.getElementById('loginGate').style.display='flex'; }
-function hideLogin(){ document.getElementById('loginGate').style.display='none'; }
-
+function showLogin(){document.getElementById('loginGate').style.display='flex';}
+function hideLogin(){document.getElementById('loginGate').style.display='none';}
 async function doLogin(){
-  const email = document.getElementById('lgEmail').value.trim();
-  const pass  = document.getElementById('lgPass').value;
-  const btn   = document.getElementById('lgBtn');
-  const err   = document.getElementById('lgErr');
-  if(!email||!pass){ err.textContent='Enter email and password'; err.style.display='block'; return; }
-  btn.textContent='Signing in…'; btn.disabled=true; err.style.display='none';
-  try { await auth.signInWithEmailAndPassword(email, pass); }
+  const email=document.getElementById('lgEmail').value.trim();
+  const pass=document.getElementById('lgPass').value;
+  const btn=document.getElementById('lgBtn');
+  const err=document.getElementById('lgErr');
+  if(!email||!pass){err.textContent='Enter email and password';err.style.display='block';return;}
+  btn.textContent='Signing in…';btn.disabled=true;err.style.display='none';
+  try{await auth.signInWithEmailAndPassword(email,pass);}
   catch(e){
-    err.textContent = (e.code==='auth/wrong-password'||e.code==='auth/user-not-found')
-      ? 'Invalid email or password' : e.message;
-    err.style.display='block';
-    btn.textContent='Sign In'; btn.disabled=false;
+    err.textContent=(e.code==='auth/wrong-password'||e.code==='auth/user-not-found')?'Invalid email or password':e.message;
+    err.style.display='block';btn.textContent='Sign In';btn.disabled=false;
   }
 }
-async function doLogout(){ await auth.signOut(); showLogin(); }
+async function doLogout(){await auth.signOut();showLogin();}
 
-/* ════════════════════════════════════════════
-   NAVIGATION
-════════════════════════════════════════════ */
-const PANEL_TITLES = {
-  dashboard:'Dashboard', upload:'Upload Resource',
-  manage:'Manage Files', subscribers:'Subscribers', payments:'Payments',
-};
-function switchPanel(id, navEl){
+/* ── NAV ── */
+const PANEL_TITLES={dashboard:'Dashboard',upload:'Upload Resource',manage:'Manage Files',subscribers:'Subscribers',payments:'Payments'};
+function switchPanel(id,navEl){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('panel-'+id).classList.add('active');
-  if(navEl) navEl.classList.add('active');
-  document.getElementById('topbarTitle').textContent = PANEL_TITLES[id]||id;
+  if(navEl)navEl.classList.add('active');
+  document.getElementById('topbarTitle').textContent=PANEL_TITLES[id]||id;
   if(id==='manage')      loadResources();
   if(id==='subscribers') loadSubscribers();
   if(id==='payments')    loadPayments();
 }
 
-/* ════════════════════════════════════════════
-   DASHBOARD
-════════════════════════════════════════════ */
+/* ── DASHBOARD ── */
 async function initDashboard(){
-  try {
-    const token = await auth.currentUser.getIdToken();
-    const res   = await fetch(`${BACKEND}/api/resources/stats/summary`,{headers:{Authorization:`Bearer ${token}`}});
+  try{
+    const token=await auth.currentUser.getIdToken();
+    const res=await fetch(`${BACKEND}/api/resources/stats/summary`,{headers:{Authorization:`Bearer ${token}`}});
     if(!res.ok) throw new Error('Stats failed');
-    const s = await res.json();
+    const s=await res.json();
     document.getElementById('st-total').textContent     = s.totalResources||0;
     document.getElementById('st-breakdown').textContent = `${s.freeResources} free · ${s.premiumResources} premium`;
     document.getElementById('st-dl').textContent        = s.totalDownloads||0;
     document.getElementById('st-dl30').textContent      = `Last 30 days: ${s.downloadsLast30d||0}`;
     document.getElementById('st-subs').textContent      = s.activeSubscribers||0;
-    document.getElementById('st-rev').textContent       = 'Ksh '+(s.activeSubscribers*300).toLocaleString();
+    // Revenue from real amounts (backend summed these)
+    document.getElementById('st-rev').textContent       = 'Ksh '+(s.estimatedRevenue||0).toLocaleString();
     document.getElementById('resCountBadge').textContent = s.totalResources||0;
     document.getElementById('subCountBadge').textContent = s.activeSubscribers||0;
-    const ranks = ['gold','silver','bronze'];
-    document.getElementById('topList').innerHTML = (s.top5Downloaded||[]).map((r,i)=>`
+    const ranks=['gold','silver','bronze'];
+    document.getElementById('topList').innerHTML=(s.top5Downloaded||[]).map((r,i)=>`
       <div class="top-item">
         <span class="top-rank ${ranks[i]||''}">${i+1}</span>
         <div class="top-info"><div class="top-title">${r.title}</div><div class="top-type">${r.type}</div></div>
         <span class="top-dl">${r.downloads}</span>
-      </div>`).join('') || '<div class="empty"><div class="empty-title">No downloads yet</div></div>';
-  } catch(e) {
-    // Firestore fallback
+      </div>`).join('')||'<div class="empty"><div class="empty-title">No downloads yet</div></div>';
+  }catch(e){
+    // Firestore fallback — count active by expiresAt > now
+    const now=new Date();
     const snap    = await db.collection('resources').get();
     const subSnap = await db.collection('subscribers').get();
+    let activeSubs=0, totalRevenue=0;
+    subSnap.forEach(d=>{
+      const sub=d.data();
+      const exp=sub.expiresAt?new Date(sub.expiresAt):null;
+      if(exp&&exp>now){activeSubs++;totalRevenue+=(sub.amount||99);}
+    });
     document.getElementById('st-total').textContent      = snap.size;
-    document.getElementById('st-subs').textContent       = subSnap.size;
-    document.getElementById('st-rev').textContent        = 'Ksh '+(subSnap.size*99).toLocaleString();
+    document.getElementById('st-subs').textContent       = activeSubs;
+    document.getElementById('st-rev').textContent        = 'Ksh '+totalRevenue.toLocaleString();
     document.getElementById('resCountBadge').textContent = snap.size;
-    document.getElementById('subCountBadge').textContent = subSnap.size;
-    let totalDl=0; snap.forEach(d=>{ totalDl += d.data().downloads||0; });
-    document.getElementById('st-dl').textContent = totalDl;
+    document.getElementById('subCountBadge').textContent = activeSubs;
+    let totalDl=0;snap.forEach(d=>{totalDl+=d.data().downloads||0;});
+    document.getElementById('st-dl').textContent=totalDl;
   }
-
-  // Recent uploads — always from Firestore
-  try {
-    const rSnap = await db.collection('resources').orderBy('createdAt','desc').limit(5).get();
-    document.getElementById('recentList').innerHTML = rSnap.docs.map(d=>{
-      const r = d.data();
-      return `<div class="top-item">
+  // Recent uploads
+  try{
+    const rSnap=await db.collection('resources').orderBy('createdAt','desc').limit(5).get();
+    document.getElementById('recentList').innerHTML=rSnap.docs.map(d=>{
+      const r=d.data();
+      return`<div class="top-item">
         <span style="font-size:18px">${r.icon||'📄'}</span>
-        <div class="top-info">
-          <div class="top-title">${r.title}</div>
-          <div class="top-type">${r.type} · ${gradeDisplayLabel(r.grades)}</div>
-        </div>
+        <div class="top-info"><div class="top-title">${r.title}</div><div class="top-type">${r.type} · ${gradeDisplayLabel(r.grades)}</div></div>
         <span class="badge ${r.free?'badge-free':'badge-premium'}">${r.free?'Free':'Premium'}</span>
       </div>`;
-    }).join('') || '<div class="empty"><div class="empty-title">No uploads yet</div></div>';
-  } catch(_){}
+    }).join('')||'<div class="empty"><div class="empty-title">No uploads yet</div></div>';
+  }catch(_){}
 }
 
-/* ════════════════════════════════════════════
-   FILE UPLOAD
-════════════════════════════════════════════ */
-function onDrag(e,active){ e.preventDefault(); document.getElementById('dropZone').classList.toggle('drag',active); }
-function onDrop(e){ e.preventDefault(); document.getElementById('dropZone').classList.remove('drag'); const f=e.dataTransfer.files[0]; if(f) setFile(f); }
-function onFileSelect(e){ const f=e.target.files[0]; if(f) setFile(f); }
-
+/* ── FILE UPLOAD ── */
+function onDrag(e,active){e.preventDefault();document.getElementById('dropZone').classList.toggle('drag',active);}
+function onDrop(e){e.preventDefault();document.getElementById('dropZone').classList.remove('drag');const f=e.dataTransfer.files[0];if(f)setFile(f);}
+function onFileSelect(e){const f=e.target.files[0];if(f)setFile(f);}
 function setFile(f){
   const allowed=['application/pdf','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/msword'];
-  if(!allowed.includes(f.type)){ toast('Only PDF and DOCX files allowed','err'); return; }
-  if(f.size>20*1024*1024){ toast('File exceeds 20MB limit','err'); return; }
+  if(!allowed.includes(f.type)){toast('Only PDF and DOCX files allowed','err');return;}
+  if(f.size>20*1024*1024){toast('File exceeds 20MB limit','err');return;}
   selectedFile=f;
   const ext=f.name.split('.').pop().toUpperCase();
   const size=f.size>=1024*1024?(f.size/1024/1024).toFixed(1)+'MB':Math.round(f.size/1024)+'KB';
@@ -892,87 +692,76 @@ function setFile(f){
   if(!document.getElementById('upIcon').value) document.getElementById('upIcon').value=ext==='PDF'?'📄':'📝';
 }
 function clearFile(){
-  selectedFile=null;
-  document.getElementById('fileInput').value='';
+  selectedFile=null;document.getElementById('fileInput').value='';
   document.getElementById('filePreview').style.display='none';
   document.getElementById('dropZone').style.display='';
 }
-function toggleFree(){ freeVal=!freeVal; document.getElementById('freeToggle').classList.toggle('on',freeVal); }
+function toggleFree(){freeVal=!freeVal;document.getElementById('freeToggle').classList.toggle('on',freeVal);}
 
 async function doUpload(){
-  if(!selectedFile){ toast('Select a file first','err'); return; }
-  const title   = document.getElementById('upTitle').value.trim();
-  const desc    = document.getElementById('upDesc').value.trim();
-  const type    = document.getElementById('upType').value;
-  const grades  = document.getElementById('upGrades').value;
-  const subject = document.getElementById('upSubject').value;
-  const pages   = document.getElementById('upPages').value;
-  const icon    = document.getElementById('upIcon').value||'📄';
-  if(!title){ toast('Enter a title','err'); return; }
-  if(!desc) { toast('Enter a description','err'); return; }
-  if(!type) { toast('Select a type','err'); return; }
-  if(!grades){ toast('Select a grade/form','err'); return; }
-
+  if(!selectedFile){toast('Select a file first','err');return;}
+  const title=document.getElementById('upTitle').value.trim();
+  const desc=document.getElementById('upDesc').value.trim();
+  const type=document.getElementById('upType').value;
+  const grades=document.getElementById('upGrades').value;
+  const subject=document.getElementById('upSubject').value;
+  const pages=document.getElementById('upPages').value;
+  const icon=document.getElementById('upIcon').value||'📄';
+  if(!title){toast('Enter a title','err');return;}
+  if(!desc){toast('Enter a description','err');return;}
+  if(!type){toast('Select a type','err');return;}
+  if(!grades){toast('Select a grade/form','err');return;}
   const btn=document.getElementById('uploadBtn');
-  btn.disabled=true; btn.innerHTML='<div class="spin"></div> Uploading…';
+  btn.disabled=true;btn.innerHTML='<div class="spin"></div> Uploading…';
   const prog=document.getElementById('upProgress');
   const bar=document.getElementById('upBar');
   const msg=document.getElementById('upMsg');
   const pct=document.getElementById('upPct');
   prog.style.display='block';
   let p=0;
-  const ticker=setInterval(()=>{ p=Math.min(p+Math.random()*15,90); bar.style.width=p+'%'; pct.textContent=Math.round(p)+'%'; },300);
-
-  try {
+  const ticker=setInterval(()=>{p=Math.min(p+Math.random()*15,90);bar.style.width=p+'%';pct.textContent=Math.round(p)+'%';},300);
+  try{
     const token=await auth.currentUser.getIdToken();
     const fd=new FormData();
-    fd.append('file',selectedFile); fd.append('title',title); fd.append('desc',desc);
-    fd.append('type',type); fd.append('grades',grades); fd.append('gradeNum',parseInt(grades)||1);
-    fd.append('subject',subject); fd.append('pages',pages); fd.append('icon',icon);
+    fd.append('file',selectedFile);fd.append('title',title);fd.append('desc',desc);
+    fd.append('type',type);fd.append('grades',grades);
+    fd.append('gradeNum',parseInt(grades)||1);  // saved to Firestore for frontend filtering
+    fd.append('subject',subject);fd.append('pages',pages);fd.append('icon',icon);
     fd.append('free',freeVal?'true':'false');
     msg.textContent='Uploading to Cloudflare R2…';
     const res=await fetch(`${BACKEND}/api/resources/upload`,{method:'POST',headers:{Authorization:`Bearer ${token}`},body:fd});
     const data=await res.json();
     if(!res.ok) throw new Error(data.error||'Upload failed');
-    clearInterval(ticker); bar.style.width='100%'; pct.textContent='100%';
+    clearInterval(ticker);bar.style.width='100%';pct.textContent='100%';
     msg.textContent='✅ Uploaded successfully!';
     toast(`✅ "${title}" uploaded`,'ok');
     setTimeout(()=>{
       clearFile();
       ['upTitle','upDesc','upPages','upIcon'].forEach(id=>document.getElementById(id).value='');
-      document.getElementById('upType').value='';
-      document.getElementById('upGrades').value='';
+      document.getElementById('upType').value='';document.getElementById('upGrades').value='';
       document.getElementById('upSubject').value='';
-      freeVal=false; document.getElementById('freeToggle').classList.remove('on');
-      prog.style.display='none'; bar.style.width='0%';
-      btn.disabled=false; btn.innerHTML='⬆️ Upload to R2';
+      freeVal=false;document.getElementById('freeToggle').classList.remove('on');
+      prog.style.display='none';bar.style.width='0%';
+      btn.disabled=false;btn.innerHTML='⬆️ Upload to R2';
       initDashboard();
     },1800);
-  } catch(e){
-    clearInterval(ticker); prog.style.display='none';
-    btn.disabled=false; btn.innerHTML='⬆️ Upload to R2';
+  }catch(e){
+    clearInterval(ticker);prog.style.display='none';
+    btn.disabled=false;btn.innerHTML='⬆️ Upload to R2';
     toast('Upload failed: '+e.message,'err');
   }
 }
 
-/* ════════════════════════════════════════════
-   MANAGE RESOURCES
-════════════════════════════════════════════ */
+/* ── MANAGE ── */
 async function loadResources(){
-  try {
+  try{
     const snap=await db.collection('resources').orderBy('createdAt','desc').get();
     allResources=snap.docs.map(d=>({id:d.id,...d.data()}));
     renderManage();
-  } catch(e){ toast('Could not load resources: '+e.message,'err'); }
+  }catch(e){toast('Could not load resources: '+e.message,'err');}
 }
-
-function setManageFilter(f,el){
-  manageFilter=f;
-  document.querySelectorAll('#manageChips .chip').forEach(c=>c.classList.remove('active'));
-  el.classList.add('active'); renderManage();
-}
-function filterManage(){ renderManage(); }
-
+function setManageFilter(f,el){manageFilter=f;document.querySelectorAll('#manageChips .chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');renderManage();}
+function filterManage(){renderManage();}
 function renderManage(){
   const q=(document.getElementById('manageSearch')?.value||'').toLowerCase();
   const rows=allResources.filter(r=>{
@@ -981,10 +770,7 @@ function renderManage(){
     return tm&&qm;
   });
   const tbody=document.getElementById('manageTbody');
-  if(!rows.length){
-    tbody.innerHTML=`<tr><td colspan="8"><div class="empty"><div class="empty-icon">📁</div><div class="empty-title">No resources found</div><div class="empty-sub">Upload your first resource using the Upload tab</div></div></td></tr>`;
-    return;
-  }
+  if(!rows.length){tbody.innerHTML=`<tr><td colspan="8"><div class="empty"><div class="empty-icon">📁</div><div class="empty-title">No resources found</div><div class="empty-sub">Upload your first resource using the Upload tab</div></div></td></tr>`;return;}
   tbody.innerHTML=rows.map((r,i)=>`
     <tr>
       <td style="color:var(--text3);font-family:'JetBrains Mono',monospace;font-size:11px">${i+1}</td>
@@ -1000,108 +786,139 @@ function renderManage(){
       </div></td>
     </tr>`).join('');
 }
+async function resetPayments(){
+  if(!confirm('⚠️ Delete ALL payment records and reset stats to zero?\n\nThis cannot be undone.')) return;
+  if(!confirm('Are you absolutely sure? This wipes subscriptionPayments AND subscribers collections.')) return;
+  const btn = document.getElementById('resetPayBtn');
+  btn.textContent = '…';
+  btn.disabled = true;
+  try{
+    const token = await auth.currentUser.getIdToken();
 
-/* ════════════════════════════════════════════
-   EDIT RESOURCE
-════════════════════════════════════════════ */
+    // Delete all subscriptionPayments docs in batches
+    let snap = await db.collection('subscriptionPayments').get();
+    let batch = db.batch();
+    let count = 0;
+    snap.forEach(d => { batch.delete(d.ref); count++; if(count%499===0){batch.commit();batch=db.batch();} });
+    await batch.commit();
+
+    // Delete all subscribers docs in batches
+    snap = await db.collection('subscribers').get();
+    batch = db.batch(); count = 0;
+    snap.forEach(d => { batch.delete(d.ref); count++; if(count%499===0){batch.commit();batch=db.batch();} });
+    await batch.commit();
+
+    allPayments = [];
+    allSubs = [];
+    renderPayments();
+    renderSubs();
+    initDashboard();
+    toast('All payments and subscribers reset to zero', 'ok');
+  } catch(e){
+    toast('Reset failed: '+e.message, 'err');
+  }
+  btn.textContent = '↺ reset';
+  btn.disabled = false;
+} 
+/* ── EDIT ── */
 function openEdit(id){
-  const r=allResources.find(x=>x.id===id);
-  if(!r) return;
-  document.getElementById('editId').value      = id;
-  document.getElementById('editTitle').value   = r.title||'';
-  document.getElementById('editDesc').value    = r.desc||'';
-  document.getElementById('editType').value    = r.type||'lesson';
-  document.getElementById('editGrades').value  = r.grades||'7';
-  document.getElementById('editSubject').value = r.subject||'';
+  const r=allResources.find(x=>x.id===id);if(!r)return;
+  document.getElementById('editId').value=id;
+  document.getElementById('editTitle').value=r.title||'';
+  document.getElementById('editDesc').value=r.desc||'';
+  document.getElementById('editType').value=r.type||'lesson';
+  document.getElementById('editGrades').value=r.grades||'7';
+  document.getElementById('editSubject').value=r.subject||'';
   editFreeVal=!!r.free;
   document.getElementById('editFreeToggle').classList.toggle('on',editFreeVal);
   document.getElementById('editModal').classList.add('open');
 }
-function toggleEdit(){ editFreeVal=!editFreeVal; document.getElementById('editFreeToggle').classList.toggle('on',editFreeVal); }
-function closeEdit(){ document.getElementById('editModal').classList.remove('open'); }
-
+function toggleEdit(){editFreeVal=!editFreeVal;document.getElementById('editFreeToggle').classList.toggle('on',editFreeVal);}
+function closeEdit(){document.getElementById('editModal').classList.remove('open');}
 async function saveEdit(){
   const id=document.getElementById('editId').value;
   const token=await auth.currentUser.getIdToken();
   const grades=document.getElementById('editGrades').value;
   const payload={
-    title:   document.getElementById('editTitle').value.trim(),
-    desc:    document.getElementById('editDesc').value.trim(),
-    type:    document.getElementById('editType').value,
-    grades,
-    gradeNum: parseInt(grades)||1,
-    subject: document.getElementById('editSubject').value,
-    free:    editFreeVal,
+    title:document.getElementById('editTitle').value.trim(),
+    desc:document.getElementById('editDesc').value.trim(),
+    type:document.getElementById('editType').value,
+    grades,gradeNum:parseInt(grades)||1,
+    subject:document.getElementById('editSubject').value,
+    free:editFreeVal,
   };
-  if(!payload.title){ toast('Title required','err'); return; }
+  if(!payload.title){toast('Title required','err');return;}
   const btn=document.getElementById('editSaveBtn');
-  btn.disabled=true; btn.textContent='Saving…';
-  try {
+  btn.disabled=true;btn.textContent='Saving…';
+  try{
     const res=await fetch(`${BACKEND}/api/resources/${id}`,{method:'PATCH',headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`},body:JSON.stringify(payload)});
     if(!res.ok) throw new Error((await res.json()).error||'Update failed');
     const idx=allResources.findIndex(x=>x.id===id);
     if(idx>=0) allResources[idx]={...allResources[idx],...payload};
-    renderManage(); closeEdit(); toast('Resource updated','ok');
-  } catch(e){ toast('Save failed: '+e.message,'err'); }
-  btn.disabled=false; btn.textContent='Save Changes';
+    renderManage();closeEdit();toast('Resource updated','ok');
+  }catch(e){toast('Save failed: '+e.message,'err');}
+  btn.disabled=false;btn.textContent='Save Changes';
 }
 
-/* ════════════════════════════════════════════
-   DELETE RESOURCE
-════════════════════════════════════════════ */
-function openDelete(id,title){ deleteTarget=id; document.getElementById('delName').textContent=title; document.getElementById('delModal').classList.add('open'); }
-function closeDelete(){ document.getElementById('delModal').classList.remove('open'); deleteTarget=null; }
-
+/* ── DELETE ── */
+function openDelete(id,title){deleteTarget=id;document.getElementById('delName').textContent=title;document.getElementById('delModal').classList.add('open');}
+function closeDelete(){document.getElementById('delModal').classList.remove('open');deleteTarget=null;}
 async function confirmDelete(){
-  if(!deleteTarget) return;
+  if(!deleteTarget)return;
   const btn=document.getElementById('delBtn');
   const token=await auth.currentUser.getIdToken();
-  btn.disabled=true; btn.textContent='Deleting…';
-  try {
+  btn.disabled=true;btn.textContent='Deleting…';
+  try{
     const res=await fetch(`${BACKEND}/api/resources/${deleteTarget}`,{method:'DELETE',headers:{Authorization:`Bearer ${token}`}});
     if(!res.ok) throw new Error((await res.json()).error||'Delete failed');
     allResources=allResources.filter(r=>r.id!==deleteTarget);
-    renderManage(); closeDelete(); toast('Resource deleted','ok'); initDashboard();
-  } catch(e){ toast('Delete failed: '+e.message,'err'); }
-  btn.disabled=false; btn.textContent='Delete Forever';
+    renderManage();closeDelete();toast('Resource deleted','ok');initDashboard();
+  }catch(e){toast('Delete failed: '+e.message,'err');}
+  btn.disabled=false;btn.textContent='Delete Forever';
 }
 
-/* ════════════════════════════════════════════
-   SUBSCRIBERS
-════════════════════════════════════════════ */
+/* ── SUBSCRIBERS ──
+   FIX: show name (from payment form) + phone
+        determine active by expiresAt > now, not by missing 'status' field
+*/
 async function loadSubscribers(){
-  try {
+  try{
     const snap=await db.collection('subscribers').get();
     allSubs=snap.docs.map(d=>({id:d.id,...d.data()}));
     renderSubs();
-  } catch(e){ toast('Could not load subscribers: '+e.message,'err'); }
+  }catch(e){toast('Could not load subscribers: '+e.message,'err');}
 }
-function setSubFilter(f,el){ subFilter=f; document.querySelectorAll('#panel-subscribers .chip').forEach(c=>c.classList.remove('active')); el.classList.add('active'); renderSubs(); }
-function filterSubs(){ renderSubs(); }
-
+function setSubFilter(f,el){subFilter=f;document.querySelectorAll('#panel-subscribers .chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');renderSubs();}
+function filterSubs(){renderSubs();}
 function renderSubs(){
   const q=(document.getElementById('subSearch')?.value||'').toLowerCase();
   const now=new Date();
   const rows=allSubs.filter(s=>{
-    const isActive = s.expiresAt ? new Date(s.expiresAt) > now : !!s.unlockedAt;
-    const status   = isActive ? 'active' : 'expired';
-    const sm=subFilter==='all'||subFilter===status;
-    const qm=!q||(s.phone||'').includes(q)||(s.uid||'').includes(q);
+    const exp=s.expiresAt?new Date(s.expiresAt):null;
+    const isActive=exp?exp>now:!!s.unlockedAt;
+    const sm=subFilter==='all'||(subFilter==='active'&&isActive)||(subFilter==='expired'&&!isActive);
+    // Search by name OR phone
+    const name=(s.name||'').toLowerCase();
+    const phone=(s.phone||'').toLowerCase();
+    const qm=!q||name.includes(q)||phone.includes(q);
     return sm&&qm;
   });
-  const fmt=ts=>{if(!ts) return '—';const d=ts.toDate?ts.toDate():new Date(ts);return d.toLocaleDateString('en-KE',{day:'numeric',month:'short',year:'numeric'});};
+  const fmt=ts=>{if(!ts)return'—';const d=ts.toDate?ts.toDate():new Date(ts);return d.toLocaleDateString('en-KE',{day:'numeric',month:'short',year:'numeric'});};
   const tbody=document.getElementById('subTbody');
-  if(!rows.length){
-    tbody.innerHTML=`<tr><td colspan="7"><div class="empty"><div class="empty-icon">👥</div><div class="empty-title">No subscribers yet</div></div></td></tr>`;
-    return;
-  }
+  if(!rows.length){tbody.innerHTML=`<tr><td colspan="7"><div class="empty"><div class="empty-icon">👥</div><div class="empty-title">No subscribers found</div></div></td></tr>`;return;}
   tbody.innerHTML=rows.map((s,i)=>{
-    const isActive=s.expiresAt?new Date(s.expiresAt)>now:!!s.unlockedAt;
-    return `<tr>
+    const exp=s.expiresAt?new Date(s.expiresAt):null;
+    const isActive=exp?exp>now:!!s.unlockedAt;
+    // Name: from 'name' field (added in webhook fix); fall back to uid snippet
+    const displayName=s.name||('uid:'+( s.uid||'—').substring(0,12));
+    return`<tr>
       <td style="color:var(--text3);font-family:'JetBrains Mono',monospace;font-size:11px">${i+1}</td>
-      <td><div style="font-weight:600;font-size:13px">${s.uid||'—'}</div><div style="font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace">${s.phone||'—'}</div></td>
+      <td>
+        <div style="font-weight:600;font-size:13px">${displayName}</div>
+        <div style="font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace">${s.phone||'—'}</div>
+      </td>
       <td><span class="badge badge-type">${s.planKey||s.plan||'—'}</span></td>
-      <td><span class="sub-status-${isActive?'active':'expired'}">${isActive?'ACTIVE':'EXPIRED'}</span></td>
+      <td><span class="sub-status-${isActive?'active':'expired'}">${isActive?'✅ ACTIVE':'❌ EXPIRED'}</span></td>
       <td class="exp-date">${fmt(s.unlockedAt)}</td>
       <td class="exp-date">${fmt(s.expiresAt)}</td>
       <td style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--gold)">Ksh ${s.amount||0}</td>
@@ -1109,25 +926,51 @@ function renderSubs(){
   }).join('');
 }
 
-/* ════════════════════════════════════════════
-   PAYMENTS
-════════════════════════════════════════════ */
+/* ── PAYMENTS ── */
 async function loadPayments(){
-  try {
-    const snap=await db.collection('subscriptionPayments').orderBy('createdAt','desc').limit(100).get();
-    allPayments=snap.docs.map(d=>({id:d.id,...d.data()}));
+  try{
+    // Load both collections in parallel
+    const [paySnap, subSnap] = await Promise.all([
+      db.collection('subscriptionPayments').orderBy('createdAt','desc').limit(100).get(),
+      db.collection('subscribers').get()
+    ]);
+    
+    // Build a lookup: phone → subscriber data
+    const subsByPhone = {};
+    const subsByUid = {};
+    subSnap.forEach(d => {
+      const s = d.data();
+      if(s.phone) subsByPhone[s.phone] = s;
+      if(s.uid || d.id) subsByUid[s.uid || d.id] = s;
+    });
+    
+    allPayments = paySnap.docs.map(d => {
+      const p = { id: d.id, ...d.data() };
+      // Infer status from subscribers collection if still "pending"
+      if(p.status === 'pending' || !p.status) {
+        const matchedSub = subsByPhone[p.phone] || subsByUid[p.uid];
+        if(matchedSub && (matchedSub.unlockedAt || matchedSub.expiresAt)) {
+          p.status = 'completed';
+        }
+      }
+      return p;
+    });
+    
     renderPayments();
-  } catch(e){ toast('Could not load payments: '+e.message,'err'); }
+  } catch(e) { toast('Could not load payments: '+e.message,'err'); }
 }
 function renderPayments(){
-  const fmt=ts=>{if(!ts) return '—';const d=ts.toDate?ts.toDate():new Date(ts);return d.toLocaleDateString('en-KE',{day:'numeric',month:'short',year:'numeric'});};
+  const fmt=ts=>{if(!ts)return'—';const d=ts.toDate?ts.toDate():new Date(ts);return d.toLocaleDateString('en-KE',{day:'numeric',month:'short',year:'numeric'});};
   const STATUS_COLORS={completed:'var(--green)',confirmed:'var(--green)',pending:'var(--gold)',failed:'var(--red)',cancelled:'var(--red)'};
   const tbody=document.getElementById('payTbody');
   if(!allPayments.length){tbody.innerHTML=`<tr><td colspan="7"><div class="empty"><div class="empty-icon">💳</div><div class="empty-title">No payments yet</div></div></td></tr>`;return;}
   tbody.innerHTML=allPayments.map((p,i)=>`
     <tr>
       <td style="color:var(--text3);font-family:'JetBrains Mono',monospace;font-size:11px">${i+1}</td>
-      <td><div style="font-weight:600;font-size:13px">${p.name||'—'}</div><div style="font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace">${p.phone||'—'}</div></td>
+      <td>
+        <div style="font-weight:600;font-size:13px">${p.name||'—'}</div>
+        <div style="font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace">${p.phone||'—'}</div>
+      </td>
       <td><span class="badge badge-type">${p.planLabel||p.planKey||'—'}</span></td>
       <td style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--gold)">Ksh ${p.amount||0}</td>
       <td style="font-weight:700;font-size:12px;color:${STATUS_COLORS[p.status]||'var(--text2)'}">
@@ -1138,15 +981,12 @@ function renderPayments(){
     </tr>`).join('');
 }
 
-/* ════════════════════════════════════════════
-   UTILS
-════════════════════════════════════════════ */
+/* ── UTILS ── */
 ['editModal','delModal'].forEach(id=>{
   document.getElementById(id).addEventListener('click',function(e){
-    if(e.target===this){ id==='editModal'?closeEdit():closeDelete(); }
+    if(e.target===this){id==='editModal'?closeEdit():closeDelete();}
   });
 });
-
 function toast(msg,type='ok'){
   const t=document.createElement('div');
   t.className=`t ${type}`;
