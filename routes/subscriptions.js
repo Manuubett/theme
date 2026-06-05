@@ -7,8 +7,6 @@
  *   PAYNECTA_EMAIL        – your registered Paynecta email
  *   PAYNECTA_CODE         – your merchant code
  *   SERVER_URL            – your full backend URL (e.g. https://cbe-y1zb.onrender.com)
- *
- * Firebase (Firestore) is already initialised in server.js via admin.initializeApp()
  */
 
 const express = require('express');
@@ -28,7 +26,7 @@ if (!API_KEY)       console.error('❌ [Subscriptions] PAYNECTA_API_KEY not set'
 if (!USER_EMAIL)    console.warn('⚠️  [Subscriptions] PAYNECTA_EMAIL not set');
 if (!MERCHANT_CODE) console.warn('⚠️  [Subscriptions] PAYNECTA_CODE not set');
 
-// ── Plan definitions — must match frontend PLANS object keys ─────────────────
+// ── Plan definitions ─────────────────────────────────────────────────────────
 const PLAN_CONFIG = {
   resource_termly: { label: 'Termly Access',  amount: 99,   daysValid: 120 },
   resource_annual: { label: 'Annual Access',  amount: 270,  daysValid: 365 },
@@ -36,7 +34,6 @@ const PLAN_CONFIG = {
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
 const paynectaHeaders = () => ({
   'X-API-Key':    API_KEY,
   'X-User-Email': USER_EMAIL,
@@ -66,7 +63,6 @@ function calcExpiry(daysValid) {
 // ROUTE 1 — Initiate Payment
 // POST /api/subscriptions/initiate
 // Body: { uid, planKey, phone, name }
-// Frontend expects back: { success, paymentId }
 // ══════════════════════════════════════════════════════════════════════════════
 router.post('/initiate', async (req, res) => {
   const { uid, planKey, phone, name } = req.body;
@@ -104,7 +100,7 @@ router.post('/initiate', async (req, res) => {
       response.data?.transaction_reference       ||
       `CBE-${Date.now()}`;
 
-    // Save pending payment — keyed by txRef
+    // Save pending payment keyed by txRef
     await getDb().collection('subscriptionPayments').doc(txRef).set({
       txRef,
       uid,
@@ -122,7 +118,7 @@ router.post('/initiate', async (req, res) => {
 
     res.json({
       success:   true,
-      paymentId: txRef,  // frontend stores this (not used for polling but good to have)
+      paymentId: txRef,
       txRef,
       message:   'STK push sent. Check your phone.',
     });
@@ -137,11 +133,11 @@ router.post('/initiate', async (req, res) => {
 // ══════════════════════════════════════════════════════════════════════════════
 // ROUTE 2 — Subscription Status
 // GET /api/subscriptions/status?uid=FIREBASE_UID
-// GET /api/subscriptions/status?checkoutId=CBE-xxxxx  (fallback)
-// Frontend polls with ?uid= and checks: data.active === true
+// GET /api/subscriptions/status?uid=...&phone=254XXXXXXXXX  (fallback)
+// GET /api/subscriptions/status?checkoutId=CBE-xxxxx
 // ══════════════════════════════════════════════════════════════════════════════
 router.get('/status', async (req, res) => {
-  const { uid, checkoutId } = req.query;
+  const { uid, checkoutId, phone: phoneParam } = req.query;
 
   if (!uid && !checkoutId)
     return res.status(400).json({ success: false, error: 'uid or checkoutId is required' });
@@ -149,7 +145,7 @@ router.get('/status', async (req, res) => {
   try {
     const db = getDb();
 
-    // ── Poll by uid (primary — what the frontend uses) ────────────────────────
+    // ── 1. Primary: check subscribers by uid ─────────────────────────────────
     if (uid) {
       const subDoc = await db.collection('subscribers').doc(uid).get();
 
@@ -157,7 +153,6 @@ router.get('/status', async (req, res) => {
         const sub       = subDoc.data();
         const expiresAt = sub.expiresAt ? new Date(sub.expiresAt) : null;
         const active    = expiresAt ? expiresAt > new Date() : !!sub.unlockedAt;
-
         return res.json({
           success:   true,
           active,
@@ -167,27 +162,86 @@ router.get('/status', async (req, res) => {
         });
       }
 
-      // Not a subscriber yet — return inactive so frontend keeps polling
-      return res.json({ success: true, active: false, expiresAt: null });
+      // ── 2. Fallback: find payment record → phone → subscribersByPhone ────────
+      // Solves anonymous UID mismatch when user refreshes the page after paying
+      try {
+        const paySnap = await db.collection('subscriptionPayments')
+          .where('uid', '==', uid)
+          .orderBy('createdAt', 'desc')
+          .limit(1)
+          .get();
+
+        if (!paySnap.empty) {
+          const pay   = paySnap.docs[0].data();
+          const phone = (pay.phone || '').replace(/\D/g, '');
+
+          if (phone) {
+            const byPhone = await db.collection('subscribersByPhone').doc(phone).get();
+            if (byPhone.exists) {
+              const sub       = byPhone.data();
+              const expiresAt = sub.expiresAt ? new Date(sub.expiresAt) : null;
+              const active    = expiresAt ? expiresAt > new Date() : !!sub.unlockedAt;
+
+              // Auto-repair: write subscriber doc under current uid so future
+              // lookups by uid succeed without needing this fallback again
+              if (active) {
+                db.collection('subscribers').doc(uid)
+                  .set(
+                    { ...sub, uid, repairedAt: admin.firestore.FieldValue.serverTimestamp() },
+                    { merge: true }
+                  )
+                  .catch(() => {});
+              }
+
+              return res.json({
+                success:   true,
+                active,
+                expiresAt: sub.expiresAt || null,
+                plan:      sub.planKey   || 'resource_termly',
+                uid,
+              });
+            }
+          }
+        }
+      } catch (_) {} // non-fatal — fall through
     }
 
-    // ── Lookup by checkoutId (secondary) ─────────────────────────────────────
-    const payDoc = await db.collection('subscriptionPayments').doc(checkoutId).get();
+    // ── 3. Direct phone lookup (phoneParam sent by frontend during polling) ───
+    if (phoneParam) {
+      const phone   = normalisePhone(phoneParam);
+      const byPhone = await db.collection('subscribersByPhone').doc(phone).get();
+      if (byPhone.exists) {
+        const sub       = byPhone.data();
+        const expiresAt = sub.expiresAt ? new Date(sub.expiresAt) : null;
+        const active    = expiresAt ? expiresAt > new Date() : !!sub.unlockedAt;
+        return res.json({
+          success:   true,
+          active,
+          expiresAt: sub.expiresAt || null,
+          plan:      sub.planKey   || 'resource_termly',
+        });
+      }
+    }
 
-    if (!payDoc.exists)
-      return res.json({ success: true, status: 'pending', paid: false, active: false });
+    // ── 4. checkoutId lookup (secondary) ─────────────────────────────────────
+    if (checkoutId) {
+      const payDoc = await db.collection('subscriptionPayments').doc(checkoutId).get();
+      if (!payDoc.exists)
+        return res.json({ success: true, status: 'pending', paid: false, active: false });
+      const data   = payDoc.data();
+      const isPaid = data.status === 'completed' || data.status === 'confirmed';
+      return res.json({
+        success:  true,
+        status:   isPaid ? 'completed' : (data.status || 'pending'),
+        paid:     isPaid,
+        active:   isPaid,
+        plan:     data.planKey || 'resource_termly',
+        uid:      data.uid     || null,
+      });
+    }
 
-    const data   = payDoc.data();
-    const isPaid = data.status === 'completed' || data.status === 'confirmed';
-
-    return res.json({
-      success:   true,
-      status:    isPaid ? 'completed' : (data.status || 'pending'),
-      paid:      isPaid,
-      active:    isPaid,
-      plan:      data.planKey || 'resource_termly',
-      uid:       data.uid     || null,
-    });
+    // ── 5. Nothing found — still polling ─────────────────────────────────────
+    return res.json({ success: true, active: false, expiresAt: null });
 
   } catch (err) {
     console.error('[Status] Error:', err.message);
@@ -199,13 +253,12 @@ router.get('/status', async (req, res) => {
 // ══════════════════════════════════════════════════════════════════════════════
 // ROUTE 3 — Paynecta Webhook
 // POST /api/subscriptions/webhook
-// express.raw() for this path is already set in server.js BEFORE express.json()
+// express.raw() for this path is set in server.js BEFORE express.json()
 // ══════════════════════════════════════════════════════════════════════════════
 router.post('/webhook', async (req, res) => {
   res.json({ received: true }); // fast 200 first
 
   try {
-    // Body arrives as raw Buffer when express.raw() is active
     let payload;
     if (Buffer.isBuffer(req.body)) {
       payload = JSON.parse(req.body.toString('utf8'));
@@ -228,7 +281,7 @@ router.post('/webhook', async (req, res) => {
     const db          = getDb();
     const isCompleted = eventType === 'payment.completed' ||
                         ['completed', 'confirmed', 'success'].includes(rawStatus);
-    const isFailed    = eventType === 'payment.failed'    ||
+    const isFailed    = eventType === 'payment.failed' ||
                         ['failed', 'cancelled', 'timeout'].includes(rawStatus);
 
     if (isCompleted) {
@@ -247,7 +300,7 @@ router.post('/webhook', async (req, res) => {
       const plan    = PLAN_CONFIG[payData.planKey] || PLAN_CONFIG['resource_termly'];
       const expiresAt = calcExpiry(plan.daysValid);
 
-      // 3. Write subscriber record keyed by Firebase uid (what frontend polls via /status?uid=)
+      // 3. Write subscriber record keyed by Firebase uid
       if (uid) {
         await db.collection('subscribers').doc(uid).set({
           uid,
@@ -264,7 +317,7 @@ router.post('/webhook', async (req, res) => {
         console.log(`[Webhook] ✅ Subscriber written uid=${uid} expires=${expiresAt}`);
       }
 
-      // 4. Also index by phone for manual lookups
+      // 4. Also index by phone for fallback lookups
       if (phone) {
         await db.collection('subscribersByPhone').doc(phone).set({
           uid,
@@ -288,8 +341,8 @@ router.post('/webhook', async (req, res) => {
 
     } else {
       await db.collection('subscriptionPayments').doc(txRef).update({
-        lastEvent:     eventType  || null,
-        lastRawStatus: rawStatus  || null,
+        lastEvent:     eventType || null,
+        lastRawStatus: rawStatus || null,
       });
     }
 
@@ -372,7 +425,7 @@ router.post('/verify-bypass', async (req, res) => {
         success:   true,
         active:    true,
         message:   'Verified via subscriber record',
-        plan:      sub.planKey  || 'resource_termly',
+        plan:      sub.planKey   || 'resource_termly',
         expiresAt: sub.expiresAt || null,
       });
     }
@@ -395,17 +448,11 @@ router.post('/verify-bypass', async (req, res) => {
 // ══════════════════════════════════════════════════════════════════════════════
 router.get('/check/:phone', async (req, res) => {
   const phone = req.params.phone.replace(/\D/g, '');
-
   if (!phone)
     return res.status(400).json({ success: false, error: 'Invalid phone number' });
-
   try {
     const doc = await getDb().collection('subscribersByPhone').doc(phone).get();
-    res.json({
-      success: true,
-      isPro:   doc.exists,
-      data:    doc.exists ? doc.data() : null,
-    });
+    res.json({ success: true, isPro: doc.exists, data: doc.exists ? doc.data() : null });
   } catch (err) {
     console.error('[Check] Error:', err.message);
     res.status(500).json({ success: false, error: err.message });
@@ -420,7 +467,6 @@ router.get('/check/:phone', async (req, res) => {
 router.get('/test-paynecta', async (req, res) => {
   if (!API_KEY)
     return res.status(500).json({ success: false, message: 'PAYNECTA_API_KEY not set' });
-
   try {
     const response = await axios.get(`${PAYNECTA_URL}/me`, {
       headers:        paynectaHeaders(),
