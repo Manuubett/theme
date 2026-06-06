@@ -618,57 +618,79 @@ function switchPanel(id,navEl){
 
 /* ── DASHBOARD ── */
 async function initDashboard(){
+  const now = new Date();
+
+  // ── Always load from Firestore first (reliable source of truth) ──
   try{
-    const token=await auth.currentUser.getIdToken();
-    const res=await fetch(`${BACKEND}/api/resources/stats/summary`,{headers:{Authorization:`Bearer ${token}`}});
-    if(!res.ok) throw new Error('Stats failed');
-    const s=await res.json();
-    document.getElementById('st-total').textContent     = s.totalResources||0;
-    document.getElementById('st-breakdown').textContent = `${s.freeResources} free · ${s.premiumResources} premium`;
-    document.getElementById('st-dl').textContent        = s.totalDownloads||0;
-    document.getElementById('st-dl30').textContent      = `Last 30 days: ${s.downloadsLast30d||0}`;
-    document.getElementById('st-subs').textContent      = s.activeSubscribers||0;
-    // Revenue from real amounts (backend summed these)
-    document.getElementById('st-rev').textContent       = 'Ksh '+(s.estimatedRevenue||0).toLocaleString();
-    document.getElementById('resCountBadge').textContent = s.totalResources||0;
-    document.getElementById('subCountBadge').textContent = s.activeSubscribers||0;
-    const ranks=['gold','silver','bronze'];
-    document.getElementById('topList').innerHTML=(s.top5Downloaded||[]).map((r,i)=>`
-      <div class="top-item">
-        <span class="top-rank ${ranks[i]||''}">${i+1}</span>
-        <div class="top-info"><div class="top-title">${r.title}</div><div class="top-type">${r.type}</div></div>
-        <span class="top-dl">${r.downloads}</span>
-      </div>`).join('')||'<div class="empty"><div class="empty-title">No downloads yet</div></div>';
-  }catch(e){
-    // Firestore fallback — count active by expiresAt > now
-    const now=new Date();
-    const snap    = await db.collection('resources').get();
-    const subSnap = await db.collection('subscribers').get();
-    let activeSubs=0, totalRevenue=0;
-    subSnap.forEach(d=>{
-      const sub=d.data();
-      const exp=sub.expiresAt?new Date(sub.expiresAt):null;
-      if(exp&&exp>now){activeSubs++;totalRevenue+=(sub.amount||99);}
+    const [resSnap, subSnap, paySnap] = await Promise.all([
+      db.collection('resources').get(),
+      db.collection('subscribers').get(),
+      db.collection('subscriptionPayments').get()
+    ]);
+
+    // Build amount lookup from payments
+    const amtByPhone = {};
+    paySnap.forEach(d => {
+      const p = d.data();
+      if(p.phone && p.amount) amtByPhone[p.phone] = p.amount;
     });
-    document.getElementById('st-total').textContent      = snap.size;
+
+    let activeSubs=0, totalRevenue=0, freeCount=0, premCount=0, totalDl=0;
+
+    subSnap.forEach(d => {
+      const sub = d.data();
+      const exp = sub.expiresAt ? new Date(sub.expiresAt) : null;
+      if(exp && exp > now){
+        activeSubs++;
+        totalRevenue += sub.amount || amtByPhone[sub.phone] || 99;
+      }
+    });
+
+    resSnap.forEach(d => {
+      const r = d.data();
+      totalDl += r.downloads || 0;
+      if(r.free) freeCount++; else premCount++;
+    });
+
+    document.getElementById('st-total').textContent      = resSnap.size;
+    document.getElementById('st-breakdown').textContent  = `${freeCount} free · ${premCount} premium`;
+    document.getElementById('st-dl').textContent         = totalDl;
+    document.getElementById('st-dl30').textContent       = 'Last 30 days: —';
     document.getElementById('st-subs').textContent       = activeSubs;
-    document.getElementById('st-rev').textContent        = 'Ksh '+totalRevenue.toLocaleString();
-    document.getElementById('resCountBadge').textContent = snap.size;
+    document.getElementById('st-rev').textContent        = 'Ksh ' + totalRevenue.toLocaleString();
+    document.getElementById('resCountBadge').textContent = resSnap.size;
     document.getElementById('subCountBadge').textContent = activeSubs;
-    let totalDl=0;snap.forEach(d=>{totalDl+=d.data().downloads||0;});
-    document.getElementById('st-dl').textContent=totalDl;
+
+  }catch(e){
+    console.error('Dashboard Firestore error:', e);
+    toast('Could not load dashboard stats', 'err');
   }
-  // Recent uploads
+
+  // ── Top downloaded ──
   try{
-    const rSnap=await db.collection('resources').orderBy('createdAt','desc').limit(5).get();
-    document.getElementById('recentList').innerHTML=rSnap.docs.map(d=>{
-      const r=d.data();
+    const snap = await db.collection('resources').orderBy('downloads','desc').limit(5).get();
+    const ranks = ['gold','silver','bronze'];
+    document.getElementById('topList').innerHTML = snap.docs.map((d,i) => {
+      const r = d.data();
+      return`<div class="top-item">
+        <span class="top-rank ${ranks[i]||''}">${i+1}</span>
+        <div class="top-info"><div class="top-title">${r.title}</div><div class="top-type">${r.type||'—'}</div></div>
+        <span class="top-dl">${r.downloads||0}</span>
+      </div>`;
+    }).join('') || '<div class="empty"><div class="empty-title">No downloads yet</div></div>';
+  }catch(_){}
+
+  // ── Recent uploads ──
+  try{
+    const rSnap = await db.collection('resources').orderBy('createdAt','desc').limit(5).get();
+    document.getElementById('recentList').innerHTML = rSnap.docs.map(d => {
+      const r = d.data();
       return`<div class="top-item">
         <span style="font-size:18px">${r.icon||'📄'}</span>
         <div class="top-info"><div class="top-title">${r.title}</div><div class="top-type">${r.type} · ${gradeDisplayLabel(r.grades)}</div></div>
         <span class="badge ${r.free?'badge-free':'badge-premium'}">${r.free?'Free':'Premium'}</span>
       </div>`;
-    }).join('')||'<div class="empty"><div class="empty-title">No uploads yet</div></div>';
+    }).join('') || '<div class="empty"><div class="empty-title">No uploads yet</div></div>';
   }catch(_){}
 }
 
@@ -883,10 +905,39 @@ async function confirmDelete(){
 */
 async function loadSubscribers(){
   try{
-    const snap=await db.collection('subscribers').get();
-    allSubs=snap.docs.map(d=>({id:d.id,...d.data()}));
+    const [subSnap, paySnap] = await Promise.all([
+      db.collection('subscribers').get(),
+      db.collection('subscriptionPayments').get()
+    ]);
+
+    // Build phone → {name, amount} lookup from payments
+    const infoByPhone = {};
+    paySnap.forEach(d => {
+      const p = d.data();
+      if(p.phone){
+        if(!infoByPhone[p.phone] || p.status === 'completed'){
+          infoByPhone[p.phone] = { name: p.name||'—', amount: p.amount||0 };
+        }
+      }
+    });
+
+    allSubs = subSnap.docs.map(d => {
+      const data = d.data();
+      const info = infoByPhone[data.phone] || {};
+      return {
+        id: d.id,
+        ...data,
+        name:   data.name   || info.name   || '—',
+        amount: data.amount || info.amount  || 0,
+      };
+    });
+
+    console.log('Loaded subscribers:', allSubs.length, allSubs);
     renderSubs();
-  }catch(e){toast('Could not load subscribers: '+e.message,'err');}
+  }catch(e){
+    toast('Could not load subscribers: '+e.message,'err');
+    console.error(e);
+  }
 }
 function setSubFilter(f,el){subFilter=f;document.querySelectorAll('#panel-subscribers .chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');renderSubs();}
 function filterSubs(){renderSubs();}
