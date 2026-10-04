@@ -25,7 +25,7 @@ const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 module.exports = (admin) => {
   const router = express.Router();
   const db = admin.firestore();
-  const BUCKET = process.env.R2_BUCKET;
+  const BUCKET = process.env.R2_BUCKET_NAME || process.env.R2_BUCKET;
   const ADMINS = (process.env.ADMIN_UIDS || '').split(',').map(s => s.trim()).filter(Boolean);
   const MAX_SIZE = 500 * 1024 * 1024;
   const SITE = 'https://dehemanuelssolutions.co.ke/appstore.html';
