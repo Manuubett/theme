@@ -16,7 +16,7 @@ if (!admin.apps.length) {
     credential: admin.credential.cert({
       projectId:   process.env.FIREBASE_PROJECT_ID,
       clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      // ✅ FIXED: must be \\n not \n to correctly unescape Render env var
+      // must be \\n not \n to correctly unescape Render env var
       privateKey:  (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
     }),
   });
@@ -40,12 +40,16 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/resources',     require('./routes/resources'));
 app.use('/api/subscriptions', require('./routes/subscriptions'));
 
+// ── App Hub (APK store): upload, download, ratings ──
+// apps-routes.js must sit next to this file (not inside /routes)
+app.use('/api/apps',          require('./apps-routes')(admin));
+
 // ── Health check ──
 app.get('/api/health', (req, res) => {
   res.json({
     ok:      true,
     service: 'cbe-resource-hub',
-    version: '1.0.0',
+    version: '1.1.0',
     ts:      new Date().toISOString(),
   });
 });
@@ -56,13 +60,12 @@ app.get('/api/test-env', (req, res) => {
     FIREBASE_PROJECT_ID:   !!process.env.FIREBASE_PROJECT_ID,
     FIREBASE_CLIENT_EMAIL: !!process.env.FIREBASE_CLIENT_EMAIL,
     FIREBASE_PRIVATE_KEY:  !!process.env.FIREBASE_PRIVATE_KEY,
-    PRIVATE_KEY_LENGTH:    (process.env.FIREBASE_PRIVATE_KEY || '').length,
-    PRIVATE_KEY_STARTS:    (process.env.FIREBASE_PRIVATE_KEY || '').substring(0, 30),
     CF_ACCOUNT_ID:         !!process.env.CF_ACCOUNT_ID,
     R2_ACCESS_KEY_ID:      !!process.env.R2_ACCESS_KEY_ID,
     R2_SECRET_ACCESS_KEY:  !!process.env.R2_SECRET_ACCESS_KEY,
     R2_BUCKET_NAME:        process.env.R2_BUCKET_NAME || 'NOT SET',
     BACKEND_URL:           process.env.BACKEND_URL    || 'NOT SET',
+    ADMIN_UIDS:            !!process.env.ADMIN_UIDS,
   });
 });
 
@@ -121,6 +124,7 @@ const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`✅ CBE Resource Hub running on port ${PORT}`);
   console.log(`   Health:  https://cbe-y1zb.onrender.com/api/health`);
+  console.log(`   Apps:    https://cbe-y1zb.onrender.com/api/apps/me`);
   console.log(`   Env:     https://cbe-y1zb.onrender.com/api/test-env`);
   console.log(`   DB:      https://cbe-y1zb.onrender.com/api/test-db`);
   console.log(`   R2:      https://cbe-y1zb.onrender.com/api/test-r2`);
