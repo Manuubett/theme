@@ -27,6 +27,10 @@ module.exports = (admin) => {
 
   const r2 = new S3Client({
     region: 'auto',
+    // Newer AWS SDKs add a CRC32 checksum of an EMPTY body to presigned PUT URLs,
+    // which makes R2 reject real uploads. Only compute checksums when required.
+    requestChecksumCalculation: 'WHEN_REQUIRED',
+    responseChecksumValidation: 'WHEN_REQUIRED',
     endpoint: `https://${(process.env.CF_ACCOUNT_ID || process.env.R2_ACCOUNT_ID)}.r2.cloudflarestorage.com`,
     credentials: { accessKeyId: process.env.R2_ACCESS_KEY_ID, secretAccessKey: process.env.R2_SECRET_ACCESS_KEY },
   });
