@@ -12,8 +12,12 @@
 // 4. Firebase Console > Authentication > enable "Anonymous" sign-in (used for ratings)
 //
 // New in this version:
+//   icon field can be an emoji OR an https image link (real app icon)
+//   POST /update now accepts icon and/or ogImage (only fields you send are changed)
+//   Share page falls back to the app icon when no preview image is set
+//
+// Earlier:
 //   ogImage field on apps (https link, used for WhatsApp/social preview)
-//   POST /update            (admin)  set or clear an app's ogImage
 //   GET  /reviews/:id       (public) written reviews for an app
 //   GET  /share/:id         (public) tiny page with Open Graph tags, then redirects to the store
 
@@ -45,6 +49,13 @@ module.exports = (admin) => {
   const esc = (s) => String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   // Accept only https links (empty string = no image)
   const cleanImg = (v) => { const s = String(v || '').trim().slice(0, 500); return /^https:\/\/[^\s"'<>]+$/i.test(s) ? s : ''; };
+  // Icon = https image link, or a short emoji (max 4 characters), or empty. Returns null if invalid.
+  const cleanIcon = (v) => {
+    const s = String(v || '').trim();
+    if (!s) return '';
+    if (/^https:\/\/[^\s"'<>]+$/i.test(s)) return s.slice(0, 500);
+    return [...s].length <= 4 ? s : null;
+  };
 
   async function requireAdmin(req, res, next) {
     try {
@@ -78,8 +89,10 @@ module.exports = (admin) => {
       const { key, name, version, size, icon, desc, changelog, ogImage } = req.body;
       if (!key || !key.startsWith('apks/') || !name || !version) return res.status(400).json({ error: 'Missing fields' });
       if (ogImage && !cleanImg(ogImage)) return res.status(400).json({ error: 'Preview image must be an https link' });
+      const cleanedIcon = cleanIcon(icon);
+      if (cleanedIcon === null) return res.status(400).json({ error: 'Icon must be one emoji or an https link' });
       const ref = await db.collection('apps').add({
-        key, name, version, size: Number(size) || 0, icon: icon || '', desc: desc || '', changelog: changelog || '',
+        key, name, version, size: Number(size) || 0, icon: cleanedIcon, desc: desc || '', changelog: changelog || '',
         ogImage: cleanImg(ogImage),
         downloads: 0, ratingSum: 0, ratingCount: 0,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -88,14 +101,24 @@ module.exports = (admin) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
   });
 
-  // Admin: set or clear the preview image of an existing app
+  // Admin: change the icon and/or preview image of an existing app (only fields sent are touched)
   router.post('/update', requireAdmin, async (req, res) => {
     try {
-      const { appId, ogImage } = req.body;
-      if (ogImage && !cleanImg(ogImage)) return res.status(400).json({ error: 'Preview image must be an https link' });
+      const { appId, ogImage, icon } = req.body;
       const ref = db.collection('apps').doc(String(appId || ''));
       if (!(await ref.get()).exists) return res.status(404).json({ error: 'App not found' });
-      await ref.update({ ogImage: cleanImg(ogImage) });
+      const patch = {};
+      if (ogImage !== undefined) {
+        if (ogImage && !cleanImg(ogImage)) return res.status(400).json({ error: 'Preview image must be an https link' });
+        patch.ogImage = cleanImg(ogImage);
+      }
+      if (icon !== undefined) {
+        const ic = cleanIcon(icon);
+        if (ic === null) return res.status(400).json({ error: 'Icon must be one emoji or an https link' });
+        patch.icon = ic;
+      }
+      if (!Object.keys(patch).length) return res.status(400).json({ error: 'Nothing to update' });
+      await ref.update(patch);
       res.json({ ok: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
   });
@@ -159,7 +182,7 @@ module.exports = (admin) => {
       const rating = a.ratingCount ? ` ★ ${(a.ratingSum / a.ratingCount).toFixed(1)}/5` : '';
       const title = `${a.name} v${a.version} | Free Android app`;
       const desc = ((a.desc || 'Free Android app built in Kenya.').slice(0, 150) + rating).trim();
-      const img = cleanImg(a.ogImage) || DEFAULT_OG;
+      const img = cleanImg(a.ogImage) || cleanImg(a.icon) || DEFAULT_OG;
       res.set('Cache-Control', 'public, max-age=300');
       res.type('html').send(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
 <title>${esc(title)}</title>
