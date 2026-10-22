@@ -12,6 +12,7 @@
 // 4. Firebase Console > Authentication > enable "Anonymous" sign-in (used for ratings)
 //
 // New in this version:
+//   POST /new-version swaps the APK of an existing app (keeps details, ratings, downloads)
 //   features field: list of { title, text } shown as "Key features" in the store
 //   POST /update edits name, version, desc, changelog, features, icon, ogImage
 //   icon field can be an emoji OR an https image link (real app icon)
@@ -143,6 +144,26 @@ module.exports = (admin) => {
       }
       if (!Object.keys(patch).length) return res.status(400).json({ error: 'Nothing to update' });
       await ref.update(patch);
+      res.json({ ok: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+  });
+
+  // Admin: publish a new version of an existing app. Keeps description, features, icon, ratings and download count.
+  router.post('/new-version', requireAdmin, async (req, res) => {
+    try {
+      const { appId, key, version, size, changelog } = req.body;
+      if (!key || !String(key).startsWith('apks/') || !String(version || '').trim()) return res.status(400).json({ error: 'Missing fields' });
+      const ref = db.collection('apps').doc(String(appId || ''));
+      const snap = await ref.get();
+      if (!snap.exists) return res.status(404).json({ error: 'App not found' });
+      const oldKey = snap.data().key;
+      await ref.update({
+        key, version: String(version).trim().slice(0, 30), size: Number(size) || 0,
+        changelog: String(changelog || '').slice(0, 1000),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      // Remove the old APK from R2 (failure here is not fatal)
+      if (oldKey && oldKey !== key) { try { await r2.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: oldKey })); } catch (e) {} }
       res.json({ ok: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
   });
