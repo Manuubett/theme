@@ -12,6 +12,8 @@
 // 4. Firebase Console > Authentication > enable "Anonymous" sign-in (used for ratings)
 //
 // New in this version:
+//   features field: list of { title, text } shown as "Key features" in the store
+//   POST /update edits name, version, desc, changelog, features, icon, ogImage
 //   icon field can be an emoji OR an https image link (real app icon)
 //   POST /update now accepts icon and/or ogImage (only fields you send are changed)
 //   Share page falls back to the app icon when no preview image is set
@@ -57,6 +59,14 @@ module.exports = (admin) => {
     return [...s].length <= 4 ? s : null;
   };
 
+  // Features = list of { title, text } (max 20)
+  const cleanFeatures = (v) => {
+    if (!Array.isArray(v)) return [];
+    return v.slice(0, 20)
+      .map(f => ({ title: String((f && f.title) || '').trim().slice(0, 120), text: String((f && f.text) || '').trim().slice(0, 600) }))
+      .filter(f => f.title || f.text);
+  };
+
   async function requireAdmin(req, res, next) {
     try {
       const d = await verify(req);
@@ -86,13 +96,16 @@ module.exports = (admin) => {
 
   router.post('/create', requireAdmin, async (req, res) => {
     try {
-      const { key, name, version, size, icon, desc, changelog, ogImage } = req.body;
+      const { key, name, version, size, icon, desc, changelog, ogImage, features } = req.body;
       if (!key || !key.startsWith('apks/') || !name || !version) return res.status(400).json({ error: 'Missing fields' });
       if (ogImage && !cleanImg(ogImage)) return res.status(400).json({ error: 'Preview image must be an https link' });
       const cleanedIcon = cleanIcon(icon);
       if (cleanedIcon === null) return res.status(400).json({ error: 'Icon must be one emoji or an https link' });
       const ref = await db.collection('apps').add({
-        key, name, version, size: Number(size) || 0, icon: cleanedIcon, desc: desc || '', changelog: changelog || '',
+        key, name: String(name).trim().slice(0, 100), version: String(version).trim().slice(0, 30),
+        size: Number(size) || 0, icon: cleanedIcon,
+        desc: String(desc || '').slice(0, 5000), changelog: String(changelog || '').slice(0, 1000),
+        features: cleanFeatures(features),
         ogImage: cleanImg(ogImage),
         downloads: 0, ratingSum: 0, ratingCount: 0,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -101,13 +114,24 @@ module.exports = (admin) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
   });
 
-  // Admin: change the icon and/or preview image of an existing app (only fields sent are touched)
+  // Admin: edit any field of an existing app (only fields that are sent are changed)
   router.post('/update', requireAdmin, async (req, res) => {
     try {
-      const { appId, ogImage, icon } = req.body;
+      const { appId, name, version, desc, changelog, ogImage, icon, features } = req.body;
       const ref = db.collection('apps').doc(String(appId || ''));
       if (!(await ref.get()).exists) return res.status(404).json({ error: 'App not found' });
       const patch = {};
+      if (name !== undefined) {
+        if (!String(name).trim()) return res.status(400).json({ error: 'Name cannot be empty' });
+        patch.name = String(name).trim().slice(0, 100);
+      }
+      if (version !== undefined) {
+        if (!String(version).trim()) return res.status(400).json({ error: 'Version cannot be empty' });
+        patch.version = String(version).trim().slice(0, 30);
+      }
+      if (desc !== undefined) patch.desc = String(desc || '').slice(0, 5000);
+      if (changelog !== undefined) patch.changelog = String(changelog || '').slice(0, 1000);
+      if (features !== undefined) patch.features = cleanFeatures(features);
       if (ogImage !== undefined) {
         if (ogImage && !cleanImg(ogImage)) return res.status(400).json({ error: 'Preview image must be an https link' });
         patch.ogImage = cleanImg(ogImage);
